@@ -1,0 +1,143 @@
+# Smart Ambient Listening: full stack in one file.
+#
+#   docker compose up -d --build
+#
+# Brings up: MariaDB, OpenEMR, ChromaDB (auto-bootstrapped), the transcription and
+# summarization gateways, and a Caddy front door that puts everything on ONE https origin
+# (so the SMART on FHIR app at /app can call /transcription, /api/summarize and OpenEMR's
+# FHIR/OAuth endpoints same-origin, and the microphone works over HTTPS).
+#
+# Copy .env.example -> .env first and set SITE_ADDRESS (and passwords for anything public).
+
+services:
+
+  mysql:
+    restart: always
+    image: mariadb:11.4
+    command: ['mariadbd', '--character-set-server=utf8mb4']
+    volumes:
+      - databasevolume:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    healthcheck:
+      test: ['CMD', '/usr/local/bin/healthcheck.sh', '--su-mysql', '--connect', '--innodb_initialized']
+      start_period: 1m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
+
+  # OpenEMR. Restore your existing sitevolume + databasevolume here and it comes up
+  # already-configured (SMART client registration lives in the DB). No host ports are
+  # published, so Caddy is the only front door.
+  openemr:
+    restart: always
+    image: openemr/openemr:7.0.3
+    volumes:
+      - logvolume01:/var/log
+      - sitevolume:/var/www/localhost/htdocs/openemr/sites
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_ROOT_PASS: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${MYSQL_USER:-openemr}
+      MYSQL_PASS: ${MYSQL_PASS:-openemr}
+      OE_USER: ${OE_USER:-admin}
+      OE_PASS: ${OE_PASS:-pass}
+      # Make a fresh instance launch-ready: enable the Standard REST + FHIR APIs the SMART
+      # app needs. OPENEMR_SETTING_<global> is applied only during first-boot auto-setup, so
+      # it never overrides a restored/already-configured database.
+      OPENEMR_SETTING_rest_api: 1
+      OPENEMR_SETTING_rest_fhir_api: 1
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', '/usr/bin/curl', '--fail', '--insecure', '--location', '--show-error', '--silent', 'https://localhost/']
+      start_period: 3m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
+
+  # RAG vector store. First boot bootstraps the 1,000 MIMIC-IV SOAP schemas into the
+  # named volume; later boots reuse it.
+  chromadb:
+    restart: always
+    build: ./chromadb
+    volumes:
+      - chromadata:/app/chroma_data
+      - modelcache:/root/.cache/chroma
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8000/api/v2/heartbeat']
+      start_period: 90s
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  # Audio -> text gateway. Shells out to the per-user Modal CLI; needs outbound internet.
+  transcription:
+    restart: always
+    build: ./transcription-service
+    environment:
+      HOST: 0.0.0.0
+      PORT: '8001'
+      # Internal URL used to validate the SMART token / read user settings from OpenEMR.
+      # Code uses verify=False, so the self-signed https://openemr cert is fine.
+      OPENEMR_SERVER_URL: ${OPENEMR_SERVER_URL:-https://openemr}
+    depends_on:
+      openemr:
+        condition: service_healthy
+
+  # Transcript + FHIR context -> SOAP note (ChromaDB retrieval + Groq), and save-soap-note.
+  summarize:
+    restart: always
+    build: ./rag-text-summarization
+    environment:
+      HOST: 0.0.0.0
+      PORT: '8002'
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: '8000'
+      OPENEMR_SERVER_URL: ${OPENEMR_SERVER_URL:-https://openemr}
+      OPENEMR_DB_HOST: mysql
+      OPENEMR_DB_PORT: '3306'
+      OPENEMR_DB_USER: ${MYSQL_USER:-openemr}
+      OPENEMR_DB_PASS: ${MYSQL_PASS:-openemr}
+      OPENEMR_DB_NAME: ${MYSQL_DATABASE:-openemr}
+    volumes:
+      - modelcache:/root/.cache/chroma
+    depends_on:
+      chromadb:
+        condition: service_healthy
+      openemr:
+        condition: service_healthy
+
+  # The one published entry point. Terminates TLS, serves /app, and routes everything
+  # else same-origin.
+  caddy:
+    restart: always
+    image: caddy:2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend:/srv/app:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - openemr
+      - transcription
+      - summarize
+
+volumes:
+  # OpenEMR. Mirror the names your restore workflow uses.
+  logvolume01: {}
+  sitevolume: {}
+  databasevolume: {}
+  # Ambient-listening stack.
+  chromadata: {}
+  modelcache: {}
+  caddy_data: {}
+  caddy_config: {}

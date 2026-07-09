@@ -1,5 +1,10 @@
 # Smart Ambient Listening — Instance Setup Guide
 
+> **Just want everything in one command?** See [`../DOCKER.md`](../DOCKER.md). It is a
+> `docker compose up` that stands up OpenEMR, MariaDB, ChromaDB, both Python gateways, and a
+> Caddy front door that serves the SMART app same-origin. The guide below is the manual
+> host-Apache + systemd install.
+
 ## Prerequisites
 - OpenEMR running in Docker (ports 8080 for web, 3306 for MySQL)
 - Apache2 with SSL and mod_proxy enabled

@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 # Configuration
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8002"))
-CHROMA_HOST = "localhost"
-CHROMA_PORT = 8000
+CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
+CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
 GROQ_MODEL = "openai/gpt-oss-20b"
 
 # OpenEMR server configuration (for token validation and API key retrieval)
@@ -775,4 +775,4 @@ if __name__ == "__main__":
     logger.info("✅ Token-based authentication enabled")
     logger.info("✅ Server-side API key retrieval enabled")
     logger.info("✅ Save SOAP note endpoint enabled")
-    uvicorn.run(app, host="127.0.0.1", port=PORT)  # ✅ Bind to localhost only
+    uvicorn.run(app, host=HOST, port=PORT)  # HOST defaults to 0.0.0.0; set HOST=127.0.0.1 to bind localhost only

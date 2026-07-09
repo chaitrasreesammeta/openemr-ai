@@ -1,0 +1,42 @@
+# Single same-origin front door for the whole stack.
+#
+#   SITE_ADDRESS=localhost           -> Caddy serves a local self-signed cert (browser warning; fine for testing)
+#   SITE_ADDRESS=emr.example.com     -> Caddy auto-provisions a real Let's Encrypt cert (needs public 80/443 + DNS)
+#
+# Everything below lives on ONE origin, which is what the SMART app requires:
+#   /app/*            -> static SMART on FHIR frontend (served by Caddy)
+#   /transcription/*  -> transcription gateway   (prefix stripped)
+#   /api/summarize/*  -> summarization service   (prefix stripped)
+#   everything else   -> OpenEMR (FHIR, OAuth2, UI)
+
+{$SITE_ADDRESS:localhost} {
+	# Audio transcription gateway. handle_path strips "/transcription" so the
+	# browser's /transcription/warmup hits the service's /warmup, etc.
+	handle_path /transcription/* {
+		reverse_proxy transcription:8001
+	}
+
+	# SOAP summarization + save-soap-note. Strips "/api/summarize" so
+	# /api/summarize/summarize -> /summarize and /api/summarize/save-soap-note -> /save-soap-note.
+	handle_path /api/summarize/* {
+		reverse_proxy summarize:8002
+	}
+
+	# Static SMART on FHIR app. Request /app/index.html -> /srv/app/index.html.
+	handle /app/* {
+		root * /srv
+		file_server
+	}
+
+	# OpenEMR: FHIR (/apis), OAuth2 (/oauth2), and the full UI.
+	# We proxy to OpenEMR's own HTTPS listener so it generates correct https:// OAuth URLs;
+	# its cert is self-signed, so skip verification on this internal hop.
+	handle {
+		reverse_proxy https://openemr:443 {
+			transport http {
+				tls
+				tls_insecure_skip_verify
+			}
+		}
+	}
+}

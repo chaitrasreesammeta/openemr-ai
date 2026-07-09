@@ -8,5 +8,8 @@ python-multipart>=0.0.6
 # Modal client for calling remote ASR
 modal>=0.64.0
 
+# HTTP client (OpenEMR token validation / user-settings retrieval)
+requests>=2.31.0
+
 # Utilities
 python-dotenv>=1.0.0

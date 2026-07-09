@@ -545,4 +545,4 @@ if __name__ == "__main__":
     logger.info("Students use their OWN Modal accounts")
     logger.info("Credentials retrieved from OpenEMR per-request")
     logger.info("=" * 60)
-    uvicorn.run(app, host="127.0.0.1", port=PORT)  # ✅ Bind to localhost only
+    uvicorn.run(app, host=HOST, port=PORT)  # HOST defaults to 0.0.0.0; set HOST=127.0.0.1 to bind localhost only
