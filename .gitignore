@@ -1,2 +1,5 @@
 /.idea/
 modal.toml
+
+# macOS
+.DS_Store
