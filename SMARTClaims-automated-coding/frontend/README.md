@@ -1,1 +1,0 @@
-# SMARTClaims Frontend
