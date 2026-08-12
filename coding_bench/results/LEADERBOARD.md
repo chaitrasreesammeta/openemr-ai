@@ -11,13 +11,23 @@ CI regenerates this file and fails if the committed copy differs.
 | openai/gpt-oss-120b | cpt | gold | 312 | 0.922 [0.899, 0.943] | 0.700 | 0.954 | 0.797 | 0.849 | 0.0% | 0.8s |
 | qwen/qwen3.6-27b | icd10 | gold | 578 | 0.798 [0.779, 0.818] | 0.561 | 0.916 | 0.671 | 0.353 | 0.5% | 7.6s |
 | openai/gpt-oss-120b | icd10 | gold | 578 | 0.779 [0.758, 0.797] | 0.533 | 0.909 | 0.649 | 0.254 | 0.5% | 2.5s |
+| openai/gpt-oss-120b | cpt | full | 312 | 0.747 [0.699, 0.792] | 0.494 | 0.810 | 0.548 | 0.667 | 0.0% | 1.3s |
 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | icd10 | gold | 150 | 0.701 [0.669, 0.732] | 0.509 | 0.697 | 0.661 | 0.207 | 0.0% | 98.6s |
 | qwen/qwen3.6-27b | icd10 | full | 200 | 0.505 [0.470, 0.537] | 0.369 | 0.650 | 0.431 | 0.110 | 3.5% | 12.0s |
 | openai/gpt-oss-120b | icd10 | full | 578 | 0.397 [0.376, 0.418] | 0.208 | 0.602 | 0.243 | 0.054 | 2.2% | 5.6s |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | gold | 150 | 0.333 [0.243, 0.421] | 0.306 | 0.335 | 0.316 | 0.187 | 0.0% | 17.6s |
 
 **Reading the candidate space.** `gold` offers only the note's correct codes, so precision is 1.000 by construction and the F1 is a recall ceiling, not a deployment estimate. `full` offers the whole catalogue and is the condition that predicts real behaviour. A number from one cannot be compared against a number from the other.
 
 **Head and tail** are frequency bands over the gold label space: the ten most frequent codes, and codes with five or fewer gold mentions. The gap between them is the long-tail collapse a single F1 hides.
+
+## Quarantined runs
+
+These runs exceeded the 5% failure ceiling. Failed notes score as empty predictions, so their metrics understate the model by an unknown amount and are not results. They are listed so the attempt is not silently forgotten.
+
+| Model | Task | Candidates | n | Failed | Truncated | Reported micro F1 (not valid) |
+|---|---|---|---:|---:|---:|---:|
+| qwen/qwen3.6-27b | icd10 | full | 578 | 5.0% | 2.6% | 0.513 |
 
 ## Head to head
 
@@ -28,6 +38,12 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | micro_f1 | +0.0071 | [-0.0110, +0.0241] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | macro_f1 | -0.0015 | [-0.0659, +0.0512] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | exact_match | +0.0128 | [-0.0192, +0.0449] | no |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.5865 | [+0.5036, +0.6728] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.3982 | [+0.2669, +0.4889] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.6600 | [+0.5867, +0.7333] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.5940 | [+0.5062, +0.6805] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.4268 | [+0.2920, +0.5123] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.6733 | [+0.5933, +0.7533] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | micro_f1 | +0.0197 | [-0.0024, +0.0396] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | macro_f1 | +0.0279 | [-0.0009, +0.0571] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | exact_match | +0.0986 | [+0.0692, +0.1280] | **yes** |
@@ -75,6 +91,14 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 1.000 | 0.658 | 0.794 | 0.670 |
 | tail | 516 | 1032 | 1.000 | 0.481 | 0.649 | 0.487 |
 
+### openai/gpt-oss-120b, cpt, candidates full
+
+| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| head | 10 | 251 | 0.894 | 0.741 | 0.810 | 0.711 |
+| torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| tail | 51 | 74 | 0.556 | 0.541 | 0.548 | 0.452 |
+
 ### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, icd10, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
@@ -99,12 +123,23 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 0.621 | 0.309 | 0.412 | 0.294 |
 | tail | 516 | 1032 | 0.313 | 0.199 | 0.243 | 0.176 |
 
+### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, cpt, candidates gold
+
+| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| head | 10 | 139 | 1.000 | 0.201 | 0.335 | 0.404 |
+| torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| tail | 13 | 16 | 1.000 | 0.188 | 0.316 | 0.231 |
+
 ## Provenance
 
+- `cpt__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260812T012652Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider modal only
+- `cpt__llm__openai-gpt-oss-120b__candfull__20260812T012657Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260811T234611Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260812T000303Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq
 - `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260811T225054Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider modal only
 - `icd10__llm__openai-gpt-oss-120b__candfull__20260811T222448Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260811T201458Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260811T230052Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider groq
+- `icd10__llm__qwen-qwen3.6-27b__candfull__20260812T001122Z`: dataset `0b6d503e3b12`, git `6447232158d3`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260811T205552Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq
