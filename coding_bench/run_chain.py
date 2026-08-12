@@ -38,6 +38,7 @@ Muse, which talks to the GGUF server, and it is queued last for that reason.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import modal
@@ -283,9 +284,47 @@ def launch():
     print("  modal run coding_bench/run_chain.py::fetch")
 
 
+def _git(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(args, capture_output=True, text=True, cwd=REPO_ROOT)
+
+
+def _sha_is_reachable(sha: str | None) -> bool:
+    """True if this commit still exists and is an ancestor of HEAD.
+
+    Existence alone is not enough. A rewritten commit stays in the object
+    database as long as some other ref is holding it, so a record can look fine
+    right up until the backup branch is deleted and the id evaporates. Ancestry
+    is the question actually worth asking: is this commit part of the history
+    this checkout is on.
+    """
+    if not sha or sha == "unknown":
+        return True
+    if _git("git", "cat-file", "-e", f"{sha}^{{commit}}").returncode != 0:
+        return False
+    return _git("git", "merge-base", "--is-ancestor", sha, "HEAD").returncode == 0
+
+
 @app.local_entrypoint()
-def fetch():
-    """Copy finished records from the volume into the repo."""
+def fetch(repoint: bool = False):
+    """Copy finished records from the volume into the repo.
+
+    A queue is spawned with the commit id that was checked out at launch, and it
+    stamps that id on every record it produces, for hours afterwards. Rewrite the
+    branch in the meantime, by squashing or by stripping something out of
+    history, and every one of those ids becomes a reference to a commit that no
+    longer exists. The runs are still perfectly valid, but the one field that
+    says which code produced them now points at nothing.
+
+    So this checks, every time, and says so. Pass `--repoint` to move the dead
+    ids onto the current HEAD. That is a real loss of precision and worth
+    understanding before reaching for it: several distinct code states can
+    collapse onto one commit, and git_sha stops distinguishing them. What does
+    survive any rewrite is the content hashes, since adapter_sha256,
+    prompt_sha256 and dataset_manifest_sha256 digest the bytes rather than name
+    a commit. A record whose adapter_sha256 disagrees with the adapter at the
+    commit it names is telling you the code moved after the run, which is the
+    question git_sha was there to answer in the first place.
+    """
     runs_dir = REPO_ROOT / "coding_bench" / "results" / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -303,5 +342,30 @@ def fetch():
         target.write_text(json.dumps(record, indent=2, sort_keys=True), encoding="utf8")
         print(f"  wrote {name}")
 
-    print(f"\n{len(names)} record(s) on the volume. Regenerate the leaderboard with:")
+    # Every record on disk, not just the ones just written. A rewrite invalidates
+    # what was already sitting in the repo just as thoroughly as what arrived now.
+    stale = []
+    for path in sorted(runs_dir.glob("*.json")):
+        record = json.loads(path.read_text(encoding="utf8"))
+        sha = record["manifest"].get("git_sha")
+        if not _sha_is_reachable(sha):
+            stale.append((path, record, sha))
+
+    if not stale:
+        print(f"\n{len(names)} record(s) on the volume, all naming a reachable commit.")
+    elif repoint:
+        head = _git("git", "rev-parse", "HEAD").stdout.strip()
+        for path, record, sha in stale:
+            record["manifest"]["git_sha"] = head
+            path.write_text(json.dumps(record, indent=2, sort_keys=True), encoding="utf8")
+            print(f"  repointed {path.name}: {sha[:12]} -> {head[:12]}")
+        print(f"\n{len(stale)} record(s) repointed at HEAD.")
+    else:
+        print(f"\n{len(stale)} record(s) name a commit that is not in this history:")
+        for path, _record, sha in stale:
+            print(f"  {sha[:12]}  {path.name}")
+        print("Rerun with --repoint to move them onto HEAD, having read why that costs something:")
+        print("  modal run coding_bench/run_chain.py::fetch --repoint")
+
+    print("\nRegenerate the leaderboard with:")
     print("  python -m coding_bench.bench.reporting")

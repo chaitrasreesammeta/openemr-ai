@@ -143,8 +143,38 @@ def _paired_section(valid: list[dict]) -> list[str]:
     return lines
 
 
+def deduplicate(runs: list[dict]) -> list[dict]:
+    """Keep one run per model, task and candidate space: the best covered one.
+
+    Reruns are routine, because every step is cache seeded and re-running a
+    finished configuration costs almost nothing, so records for the same
+    configuration accumulate. Left alone they all reach the results table, and
+    worse they all reach the head to head, where a model gets paired against
+    itself and reports a delta of exactly zero with a tight interval. That reads
+    like a finding rather than like the same run twice.
+
+    Coverage decides, not recency. A 578 note run supersedes the 150 note run
+    that preceded it whichever order they happened in, because the runner slices
+    the dataset in sorted note id order, so the short run's notes are a prefix of
+    the long one's and its numbers carry strictly less information. Recency only
+    breaks ties between runs of equal length.
+
+    Nothing is deleted. The superseded records stay on disk and stay listed under
+    Provenance, so the attempt is still visible; it just stops being counted
+    twice in the tables.
+    """
+    best: dict[tuple, tuple] = {}
+    for run in runs:
+        manifest = run["manifest"]
+        key = (manifest["model_id"], manifest["task"], str(manifest["candidate_space"]))
+        rank = (manifest["n_notes"], manifest["started_at"])
+        if key not in best or rank > best[key][0]:
+            best[key] = (rank, run)
+    return [run for _rank, run in best.values()]
+
+
 def render(runs: list[dict]) -> str:
-    valid = [run for run in runs if is_valid(run)]
+    valid = deduplicate([run for run in runs if is_valid(run)])
     invalid = [run for run in runs if not is_valid(run)]
 
     valid.sort(key=lambda run: -run["metrics"]["core"]["micro_f1"])
