@@ -14,7 +14,7 @@ CI regenerates this file and fails if the committed copy differs.
 | openai/gpt-oss-120b | icd10 | gold | 578 | 0.779 [0.758, 0.797] | 0.533 | 0.909 | 0.649 | 0.254 | 0.5% | 2.5s |
 | openai/gpt-oss-120b | cpt | full | 312 | 0.747 [0.699, 0.792] | 0.494 | 0.810 | 0.548 | 0.667 | 0.0% | 1.3s |
 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | icd10 | gold | 150 | 0.701 [0.669, 0.732] | 0.509 | 0.697 | 0.661 | 0.207 | 0.0% | 98.6s |
-| qwen/qwen3.6-27b | icd10 | full | 200 | 0.505 [0.470, 0.537] | 0.369 | 0.650 | 0.431 | 0.110 | 3.5% | 12.0s |
+| qwen/qwen3.6-27b | icd10 | full | 578 | 0.521 [0.504, 0.537] | 0.337 | 0.744 | 0.340 | 0.064 | 2.4% | 11.8s |
 | openai/gpt-oss-120b | icd10 | full | 578 | 0.397 [0.376, 0.418] | 0.208 | 0.602 | 0.243 | 0.054 | 2.2% | 5.6s |
 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | gold | 150 | 0.333 [0.243, 0.421] | 0.306 | 0.335 | 0.316 | 0.187 | 0.0% | 17.6s |
 
@@ -57,9 +57,9 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0207 | [-0.0297, +0.0633] | no |
 | openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0055 | [-0.0436, +0.0481] | no |
 | openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.0867 | [+0.0333, +0.1533] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 200 | micro_f1 | +0.1217 | [+0.0867, +0.1591] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 200 | macro_f1 | +0.1591 | [+0.1227, +0.1935] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 200 | exact_match | -0.0100 | [-0.0500, +0.0300] | no |
+| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | micro_f1 | +0.1242 | [+0.1008, +0.1454] | **yes** |
+| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | macro_f1 | +0.1289 | [+0.1087, +0.1562] | **yes** |
+| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | exact_match | +0.0104 | [-0.0087, +0.0294] | no |
 
 ## Frequency bands
 
@@ -123,9 +123,9 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
-| head | 10 | 260 | 0.720 | 0.592 | 0.650 | 0.619 |
-| torso | 41 | 338 | 0.610 | 0.550 | 0.579 | 0.539 |
-| tail | 488 | 760 | 0.544 | 0.357 | 0.431 | 0.349 |
+| head | 10 | 627 | 0.717 | 0.774 | 0.744 | 0.728 |
+| torso | 147 | 1979 | 0.591 | 0.514 | 0.550 | 0.450 |
+| tail | 516 | 1032 | 0.322 | 0.361 | 0.340 | 0.297 |
 
 ### openai/gpt-oss-120b, icd10, candidates full
 
@@ -155,4 +155,5 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260811T201458Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260811T230052Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260812T001122Z`: dataset `0b6d503e3b12`, git `6447232158d3`, provider groq
+- `icd10__llm__qwen-qwen3.6-27b__candfull__20260812T015022Z`: dataset `0b6d503e3b12`, git `d315cc5da372`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260811T205552Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq
