@@ -7,6 +7,7 @@ CI regenerates this file and fails if the committed copy differs.
 
 | Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
+| qwen/qwen3.6-27b | cpt | gold | 312 | 0.929 [0.907, 0.949] | 0.698 | 0.963 | 0.797 | 0.862 | 0.0% | 2.6s |
 | openai/gpt-oss-120b | cpt | gold | 312 | 0.922 [0.899, 0.943] | 0.700 | 0.954 | 0.797 | 0.849 | 0.0% | 0.8s |
 | qwen/qwen3.6-27b | icd10 | gold | 578 | 0.798 [0.779, 0.818] | 0.561 | 0.916 | 0.671 | 0.353 | 0.5% | 7.6s |
 | openai/gpt-oss-120b | icd10 | gold | 578 | 0.779 [0.758, 0.797] | 0.533 | 0.909 | 0.649 | 0.254 | 0.5% | 2.5s |
@@ -24,6 +25,9 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 
 | A | B | Candidates | n | Statistic | Delta (A - B) | 95% CI | Real? |
 |---|---|---|---:|---|---:|---|---|
+| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | micro_f1 | +0.0071 | [-0.0110, +0.0241] | no |
+| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | macro_f1 | -0.0015 | [-0.0659, +0.0512] | no |
+| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | exact_match | +0.0128 | [-0.0192, +0.0449] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | micro_f1 | +0.0197 | [-0.0024, +0.0396] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | macro_f1 | +0.0279 | [-0.0009, +0.0571] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | exact_match | +0.0986 | [+0.0692, +0.1280] | **yes** |
@@ -38,6 +42,14 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 200 | exact_match | -0.0100 | [-0.0500, +0.0300] | no |
 
 ## Frequency bands
+
+### qwen/qwen3.6-27b, cpt, candidates gold
+
+| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| head | 10 | 251 | 1.000 | 0.928 | 0.963 | 0.840 |
+| torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| tail | 51 | 74 | 1.000 | 0.662 | 0.797 | 0.671 |
 
 ### openai/gpt-oss-120b, cpt, candidates gold
 
@@ -89,9 +101,10 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 
 ## Provenance
 
-- `cpt__llm__openai-gpt-oss-120b__candgold__20260811T234611Z`: dataset `3e4376d906ea`, git `353fb87973e6`, provider groq
-- `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260811T225054Z`: dataset `0b6d503e3b12`, git `c08d3fe1c581`, provider modal only
-- `icd10__llm__openai-gpt-oss-120b__candfull__20260811T222448Z`: dataset `0b6d503e3b12`, git `ce3de5f5495e`, provider groq
+- `cpt__llm__openai-gpt-oss-120b__candgold__20260811T234611Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq
+- `cpt__llm__qwen-qwen3.6-27b__candgold__20260812T000303Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq
+- `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260811T225054Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider modal only
+- `icd10__llm__openai-gpt-oss-120b__candfull__20260811T222448Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260811T201458Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq
-- `icd10__llm__qwen-qwen3.6-27b__candfull__20260811T230052Z`: dataset `0b6d503e3b12`, git `c08d3fe1c581`, provider groq
+- `icd10__llm__qwen-qwen3.6-27b__candfull__20260811T230052Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260811T205552Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq

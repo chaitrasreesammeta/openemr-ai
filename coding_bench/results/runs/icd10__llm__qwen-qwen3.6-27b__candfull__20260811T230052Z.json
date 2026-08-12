@@ -9,7 +9,7 @@
     "external_provider": "groq",
     "finished_at": "2026-08-11T23:26:51.738143+00:00",
     "git_dirty": false,
-    "git_sha": "c08d3fe1c5817a20f8070e4a354556c2c4d7f507",
+    "git_sha": "a7cbadffb816c0cf396a1e6e448dc10b53b69757",
     "model_id": "qwen/qwen3.6-27b",
     "n_notes": 200,
     "parameters": {
