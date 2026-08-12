@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coding-bench"
+version = "0.1.0"
+description = "Benchmark for automated CPT and ICD-10 coding from clinical notes"
+requires-python = ">=3.10"
+dependencies = [
+    "pyarrow>=15.0.0",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# Approaches and adapters are opt in, so public CI installs almost nothing.
+retrieval = ["sentence-transformers>=3.0.0"]
+groq = ["groq>=0.11.0"]
+modal = ["modal>=1.0.0"]
+dev = ["pytest>=8.0.0"]
+
+# The package directory is also the project directory, so map the top level
+# package onto it explicitly. Install with: pip install -e coding_bench/
+[tool.setuptools]
+package-dir = { "coding_bench" = "." }
+packages = [
+    "coding_bench",
+    "coding_bench.bench",
+    "coding_bench.data",
+    "coding_bench.approaches",
+    "coding_bench.adapters",
+]

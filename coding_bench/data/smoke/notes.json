@@ -1,0 +1,743 @@
+{
+  "description": "Synthetic clinical notes with gold CPT and ICD-10-CM labels and evidence spans. Entirely invented, no derivation from any real record.",
+  "generated_by": "coding_bench/data/smoke/build_smoke.py",
+  "label_spaces": {
+    "cpt": {
+      "20610": "Drain/inject joint/bursa major",
+      "36415": "Routine venipuncture",
+      "69209": "Remove impacted ear wax uni",
+      "71046": "X-ray exam chest 2 views",
+      "81002": "Urinalysis nonauto w/o scope",
+      "85025": "Complete cbc w/auto diff wbc",
+      "90471": "Immunization admin",
+      "90686": "Flu vaccine quad iiv4 im",
+      "93000": "Electrocardiogram complete",
+      "94640": "Airway inhalation treatment",
+      "96372": "Ther/proph/diag inj sc/im",
+      "99203": "Office o/p new low 30-44 min",
+      "99204": "Office o/p new mod 45-59 min",
+      "99212": "Office o/p est sf 10-19 min",
+      "99213": "Office o/p est low 20-29 min",
+      "99214": "Office o/p est mod 30-39 min",
+      "99396": "Prev visit est age 40-64"
+    },
+    "icd10": {
+      "E11.65": "Type 2 diabetes mellitus with hyperglycemia",
+      "E11.9": "Type 2 diabetes mellitus without complications",
+      "E66.9": "Obesity, unspecified",
+      "E78.5": "Hyperlipidemia, unspecified",
+      "F41.1": "Generalized anxiety disorder",
+      "H61.23": "Impacted cerumen, bilateral",
+      "I10": "Essential (primary) hypertension",
+      "J01.90": "Acute sinusitis, unspecified",
+      "J02.9": "Acute pharyngitis, unspecified",
+      "J06.9": "Acute upper respiratory infection, unspecified",
+      "J20.9": "Acute bronchitis, unspecified",
+      "J45.901": "Unspecified asthma with (acute) exacerbation",
+      "J45.909": "Unspecified asthma, uncomplicated",
+      "K21.9": "Gastro-esophageal reflux disease without esophagitis",
+      "L03.115": "Cellulitis of right lower limb",
+      "M25.561": "Pain in right knee",
+      "M54.50": "Low back pain, unspecified",
+      "M79.641": "Pain in right hand",
+      "N39.0": "Urinary tract infection, site not specified",
+      "R05.9": "Cough, unspecified",
+      "R07.9": "Chest pain, unspecified",
+      "R10.9": "Unspecified abdominal pain",
+      "R51.9": "Headache, unspecified",
+      "S93.401A": "Sprain of unspecified ligament of right ankle, initial encounter",
+      "Z00.00": "Encounter for general adult medical examination without abnormal findings",
+      "Z23": "Encounter for immunization"
+    }
+  },
+  "notes": [
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99214"
+      ],
+      "cpt_evidence": {
+        "99214": [
+          [
+            765,
+            861
+          ]
+        ]
+      },
+      "description": "Established patient, chronic disease follow up",
+      "icd10": [
+        "E11.65",
+        "I10"
+      ],
+      "icd10_evidence": {
+        "E11.65": [
+          [
+            532,
+            575
+          ]
+        ],
+        "I10": [
+          [
+            666,
+            700
+          ]
+        ]
+      },
+      "note_id": "SYN-001",
+      "text": "CHIEF COMPLAINT: Diabetes and blood pressure follow up.\n\nSUBJECTIVE: 58 year old established patient returns for routine follow up of type 2 diabetes mellitus and hypertension. Home glucose readings have been running 140 to 180 fasting. Takes metformin 1000 mg twice daily. Denies polyuria, polydipsia, or visual change. Home blood pressure readings average 148/92. No chest pain or shortness of breath.\n\nOBJECTIVE: BP 146/90. HR 78. BMI 31.4. Feet examined, monofilament intact bilaterally, no ulceration.\n\nASSESSMENT AND PLAN:\n1. Type 2 diabetes mellitus with hyperglycemia. A1c ordered today. Increase metformin to 1000 mg in the morning and 1500 mg at night.\n2. Essential hypertension, above goal. Add amlodipine 5 mg daily.\n3. Counseled on diet and activity.\n\nTotal time spent on the date of the encounter including chart review and counseling: 32 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99212"
+      ],
+      "cpt_evidence": {
+        "99212": [
+          [
+            637,
+            660
+          ]
+        ]
+      },
+      "description": "Acute upper respiratory infection",
+      "icd10": [
+        "J06.9",
+        "R05.9"
+      ],
+      "icd10_evidence": {
+        "J06.9": [
+          [
+            407,
+            447
+          ]
+        ],
+        "R05.9": [
+          [
+            496,
+            517
+          ]
+        ]
+      },
+      "note_id": "SYN-002",
+      "text": "CHIEF COMPLAINT: Sore throat and congestion for four days.\n\nSUBJECTIVE: 34 year old established patient with four days of nasal congestion, sore throat, and a dry cough. No fever at home. No shortness of breath. No known sick contacts.\n\nOBJECTIVE: Temp 98.9 F. Oropharynx erythematous without exudate. Nares congested. Lungs clear to auscultation bilaterally. Rapid strep negative.\n\nASSESSMENT AND PLAN:\n1. Acute upper respiratory infection, viral. Supportive care discussed, fluids and rest.\n2. Cough, non productive. Honey and over the counter dextromethorphan as needed.\nReturn if fever develops or symptoms persist beyond ten days.\n\nTime spent: 14 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99203"
+      ],
+      "cpt_evidence": {
+        "99203": [
+          [
+            751,
+            803
+          ]
+        ]
+      },
+      "description": "New patient, low back pain",
+      "icd10": [
+        "M54.50"
+      ],
+      "icd10_evidence": {
+        "M54.50": [
+          [
+            542,
+            581
+          ]
+        ]
+      },
+      "note_id": "SYN-003",
+      "text": "CHIEF COMPLAINT: Low back pain after moving furniture.\n\nSUBJECTIVE: 41 year old new patient presents with three days of low back pain that began after lifting a couch. Pain is across the lumbar area, worse with bending, no radiation below the knee. No numbness, weakness, bowel or bladder change. No history of cancer, no fever, no IV drug use.\n\nOBJECTIVE: Ambulates without difficulty. Lumbar paraspinal tenderness. Straight leg raise negative bilaterally. Strength 5/5 in the lower extremities. Reflexes symmetric.\n\nASSESSMENT AND PLAN:\n1. Low back pain, mechanical, no red flags. No imaging indicated at this time. Naproxen 500 mg twice daily with food, heat, and continued activity as tolerated.\nDiscussed expected course and return precautions.\n\nTotal time on the date of the encounter: 38 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "94640",
+        "99213"
+      ],
+      "cpt_evidence": {
+        "94640": [
+          [
+            463,
+            520
+          ]
+        ],
+        "99213": [
+          [
+            775,
+            798
+          ]
+        ]
+      },
+      "description": "Asthma exacerbation with nebulizer treatment",
+      "icd10": [
+        "J45.901"
+      ],
+      "icd10_evidence": {
+        "J45.901": [
+          [
+            615,
+            645
+          ]
+        ]
+      },
+      "note_id": "SYN-004",
+      "text": "CHIEF COMPLAINT: Wheezing and shortness of breath since yesterday.\n\nSUBJECTIVE: 27 year old established patient with a history of asthma reports two days of increasing wheeze and cough, using her rescue inhaler six times yesterday. No fever. Symptoms started after a weekend at a friend's house with cats.\n\nOBJECTIVE: Temp 98.4 F. RR 22. O2 saturation 94 percent on room air. Expiratory wheeze throughout both lung fields. Speaking in full sentences.\n\nPROCEDURE: Albuterol nebulizer treatment administered in the office. Post treatment saturation 98 percent, wheeze substantially improved.\n\nASSESSMENT AND PLAN:\n1. Asthma with acute exacerbation. Prednisone 40 mg daily for five days. Continue albuterol as needed. Start inhaled corticosteroid daily.\nFollow up in one week.\n\nTime spent: 25 minutes."
+    },
+    {
+      "category": "Preventive Visit",
+      "cpt": [
+        "36415",
+        "90471",
+        "90686",
+        "99396"
+      ],
+      "cpt_evidence": {
+        "36415": [
+          [
+            645,
+            693
+          ]
+        ],
+        "90471": [
+          [
+            561,
+            597
+          ]
+        ],
+        "90686": [
+          [
+            561,
+            641
+          ]
+        ],
+        "99396": [
+          [
+            90,
+            127
+          ]
+        ]
+      },
+      "description": "Annual preventive examination",
+      "icd10": [
+        "Z00.00",
+        "Z23"
+      ],
+      "icd10_evidence": {
+        "Z00.00": [
+          [
+            412,
+            481
+          ]
+        ],
+        "Z23": [
+          [
+            561,
+            597
+          ]
+        ]
+      },
+      "note_id": "SYN-005",
+      "text": "CHIEF COMPLAINT: Annual physical.\n\nSUBJECTIVE: 52 year old established patient here for a routine annual preventive examination. Feels well. No new complaints. Non smoker. Exercises twice weekly. Family history notable for coronary disease in her father at age 62.\n\nOBJECTIVE: BP 118/74. HR 66. BMI 24.1. General physical examination entirely within normal limits. No abnormal findings.\n\nASSESSMENT AND PLAN:\n1. Encounter for general adult medical examination, no abnormal findings. Age appropriate screening discussed. Mammogram and colonoscopy up to date.\n2. Influenza vaccine administered today, quadrivalent, intramuscular, left deltoid.\n3. Routine venipuncture performed for a lipid panel and comprehensive metabolic panel."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "81002",
+        "99212"
+      ],
+      "cpt_evidence": {
+        "81002": [
+          [
+            369,
+            430
+          ]
+        ],
+        "99212": [
+          [
+            670,
+            693
+          ]
+        ]
+      },
+      "description": "Urinary tract infection",
+      "icd10": [
+        "N39.0"
+      ],
+      "icd10_evidence": {
+        "N39.0": [
+          [
+            518,
+            561
+          ]
+        ]
+      },
+      "note_id": "SYN-006",
+      "text": "CHIEF COMPLAINT: Burning with urination for two days.\n\nSUBJECTIVE: 29 year old established patient with two days of dysuria, urinary frequency, and urgency. No flank pain, no fever, no vaginal discharge. Not pregnant, last menstrual period two weeks ago.\n\nOBJECTIVE: Temp 98.6 F. Abdomen soft, no suprapubic tenderness, no costovertebral angle tenderness.\n\nLABORATORY: Urinalysis performed in office by dipstick without microscopy: positive leukocyte esterase, positive nitrites, trace blood.\n\nASSESSMENT AND PLAN:\n1. Acute uncomplicated urinary tract infection. Nitrofurantoin 100 mg twice daily for five days. Increase fluids. Return if fever or flank pain develops.\n\nTime spent: 16 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "93000",
+        "99214"
+      ],
+      "cpt_evidence": {
+        "93000": [
+          [
+            456,
+            536
+          ]
+        ],
+        "99214": [
+          [
+            841,
+            893
+          ]
+        ]
+      },
+      "description": "Chest pain evaluation with ECG",
+      "icd10": [
+        "E78.5",
+        "R07.9"
+      ],
+      "icd10_evidence": {
+        "E78.5": [
+          [
+            723,
+            773
+          ]
+        ],
+        "R07.9": [
+          [
+            619,
+            661
+          ]
+        ]
+      },
+      "note_id": "SYN-007",
+      "text": "CHIEF COMPLAINT: Chest discomfort yesterday evening.\n\nSUBJECTIVE: 61 year old established patient describes twenty minutes of central chest discomfort last night while watching television, resolved spontaneously. Not exertional. No radiation, no diaphoresis, no dyspnea. History of hyperlipidemia. No prior cardiac history.\n\nOBJECTIVE: BP 132/80. HR 72, regular. Lungs clear. Heart regular rate and rhythm, no murmur. No chest wall tenderness.\n\nPROCEDURE: Twelve lead electrocardiogram performed in office with interpretation and report: normal sinus rhythm, no ST segment changes, no Q waves.\n\nASSESSMENT AND PLAN:\n1. Chest pain, unspecified, atypical features, low risk by history. Outpatient stress testing arranged.\n2. Hyperlipidemia. Continue atorvastatin 20 mg daily.\nStrict return precautions given for recurrent or exertional pain.\n\nTotal time on the date of the encounter: 35 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "69209",
+        "99212"
+      ],
+      "cpt_evidence": {
+        "69209": [
+          [
+            358,
+            464
+          ]
+        ],
+        "99212": [
+          [
+            688,
+            711
+          ]
+        ]
+      },
+      "description": "Impacted cerumen removal",
+      "icd10": [
+        "H61.23"
+      ],
+      "icd10_evidence": {
+        "H61.23": [
+          [
+            607,
+            650
+          ]
+        ]
+      },
+      "note_id": "SYN-008",
+      "text": "CHIEF COMPLAINT: Right ear feels blocked.\n\nSUBJECTIVE: 45 year old established patient with one week of decreased hearing and fullness in the right ear. Uses cotton swabs regularly. No pain, no drainage, no vertigo.\n\nOBJECTIVE: Right external auditory canal completely obstructed by firm cerumen. Left canal clear, left tympanic membrane normal.\n\nPROCEDURE: Impacted cerumen removed from the right ear by instrumentation under direct visualization using a curette. Tympanic membrane visualized afterward and was intact and normal. Patient reported immediate improvement in hearing.\n\nASSESSMENT AND PLAN:\n1. Impacted cerumen, right ear, removed today. Advised to stop using cotton swabs.\n\nTime spent: 15 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "20610",
+        "99213"
+      ],
+      "cpt_evidence": {
+        "20610": [
+          [
+            462,
+            570
+          ]
+        ],
+        "99213": [
+          [
+            757,
+            780
+          ]
+        ]
+      },
+      "description": "Knee pain with joint injection",
+      "icd10": [
+        "M25.561"
+      ],
+      "icd10_evidence": {
+        "M25.561": [
+          [
+            653,
+            676
+          ]
+        ]
+      },
+      "note_id": "SYN-009",
+      "text": "CHIEF COMPLAINT: Right knee pain.\n\nSUBJECTIVE: 67 year old established patient with six months of right knee pain, worse with stairs and prolonged standing. Known osteoarthritis. Acetaminophen gives partial relief. Requests injection, which helped last year.\n\nOBJECTIVE: Right knee with mild effusion, crepitus on range of motion, medial joint line tenderness. No warmth or erythema. Stable ligaments.\n\nPROCEDURE: After informed consent and sterile preparation, the right knee joint was injected with 40 mg of triamcinolone and 3 mL of lidocaine using a lateral approach. Patient tolerated the procedure well. No complications.\n\nASSESSMENT AND PLAN:\n1. Pain in the right knee. Injection as above. Home exercise program reviewed. Follow up in three months.\n\nTime spent: 28 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99204"
+      ],
+      "cpt_evidence": {
+        "99204": [
+          [
+            763,
+            815
+          ]
+        ]
+      },
+      "description": "New patient with anxiety and reflux",
+      "icd10": [
+        "F41.1",
+        "K21.9"
+      ],
+      "icd10_evidence": {
+        "F41.1": [
+          [
+            467,
+            505
+          ]
+        ],
+        "K21.9": [
+          [
+            616,
+            667
+          ]
+        ]
+      },
+      "note_id": "SYN-010",
+      "text": "CHIEF COMPLAINT: Stress and heartburn.\n\nSUBJECTIVE: 36 year old new patient reports six months of persistent worry that is difficult to control, affecting sleep and concentration at work. Also reports burning epigastric discomfort after meals, three or four times per week, worse lying down. No dysphagia, no weight loss, no melena.\n\nOBJECTIVE: BP 124/78. Affect anxious. Abdomen soft, mild epigastric tenderness, no rebound. GAD-7 score 13.\n\nASSESSMENT AND PLAN:\n1. Generalized anxiety disorder, moderate. Started sertraline 50 mg daily. Referral to behavioral health placed. Discussed expected time to benefit.\n2. Gastroesophageal reflux disease without esophagitis. Omeprazole 20 mg daily before breakfast, dietary triggers reviewed.\nFollow up in four weeks.\n\nTotal time on the date of the encounter: 52 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "71046",
+        "99213"
+      ],
+      "cpt_evidence": {
+        "71046": [
+          [
+            402,
+            465
+          ]
+        ],
+        "99213": [
+          [
+            723,
+            746
+          ]
+        ]
+      },
+      "description": "Acute bronchitis with chest imaging",
+      "icd10": [
+        "J20.9"
+      ],
+      "icd10_evidence": {
+        "J20.9": [
+          [
+            547,
+            591
+          ]
+        ]
+      },
+      "note_id": "SYN-011",
+      "text": "CHIEF COMPLAINT: Cough for ten days.\n\nSUBJECTIVE: 48 year old established patient with ten days of productive cough, now with clear to yellow sputum. Low grade fevers early in the course, none for four days. No pleuritic pain. Smoker, half a pack daily.\n\nOBJECTIVE: Temp 98.7 F. RR 18. O2 saturation 97 percent. Scattered rhonchi that clear with cough. No focal consolidation on examination.\n\nIMAGING: Chest radiograph, two views, obtained in office and interpreted: no infiltrate, no effusion, normal cardiac silhouette.\n\nASSESSMENT AND PLAN:\n1. Acute bronchitis. Antibiotics not indicated. Symptomatic management reviewed.\n2. Tobacco use counseling provided, patient interested in quitting, nicotine patches prescribed.\n\nTime spent: 24 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "96372",
+        "99214"
+      ],
+      "cpt_evidence": {
+        "96372": [
+          [
+            464,
+            534
+          ]
+        ],
+        "99214": [
+          [
+            787,
+            839
+          ]
+        ]
+      },
+      "description": "Cellulitis with intramuscular injection",
+      "icd10": [
+        "L03.115"
+      ],
+      "icd10_evidence": {
+        "L03.115": [
+          [
+            560,
+            595
+          ]
+        ]
+      },
+      "note_id": "SYN-012",
+      "text": "CHIEF COMPLAINT: Red, painful area on the right lower leg.\n\nSUBJECTIVE: 55 year old established patient with two days of expanding redness, warmth, and tenderness of the right lower leg following a scratch while gardening. Subjective fevers last night. No purulent drainage.\n\nOBJECTIVE: Temp 100.4 F. Right lower leg with a 9 by 6 cm area of confluent erythema, warmth, and tenderness, borders marked. No fluctuance, no crepitus. Distal pulses intact.\n\nPROCEDURE: Ceftriaxone 1 g administered by intramuscular injection in the office.\n\nASSESSMENT AND PLAN:\n1. Cellulitis of the right lower limb. Ceftriaxone given today as above, cephalexin 500 mg four times daily for seven days. Borders marked, photographs taken. Return tomorrow for recheck or sooner for spreading redness or fever.\n\nTotal time on the date of the encounter: 33 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99213"
+      ],
+      "cpt_evidence": {
+        "99213": [
+          [
+            719,
+            742
+          ]
+        ]
+      },
+      "description": "Ankle sprain, initial encounter",
+      "icd10": [
+        "S93.401A"
+      ],
+      "icd10_evidence": {
+        "S93.401A": [
+          [
+            534,
+            579
+          ]
+        ]
+      },
+      "note_id": "SYN-013",
+      "text": "CHIEF COMPLAINT: Twisted right ankle playing basketball.\n\nSUBJECTIVE: 22 year old established patient inverted the right ankle during a game yesterday. Able to bear weight with a limp. Swelling over the lateral malleolus. No numbness.\n\nOBJECTIVE: Right ankle with lateral swelling and ecchymosis. Tenderness over the anterior talofibular ligament. No tenderness over the posterior edge of either malleolus, no midfoot tenderness. Able to take four steps. Ottawa ankle rules negative, no radiograph indicated.\n\nASSESSMENT AND PLAN:\n1. Sprain of the right ankle, initial encounter. Rest, ice, compression, elevation. Air stirrup brace dispensed. Naproxen as needed. Gradual return to activity, expect two to four weeks.\n\nTime spent: 21 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99213"
+      ],
+      "cpt_evidence": {
+        "99213": [
+          [
+            737,
+            760
+          ]
+        ]
+      },
+      "description": "Headache, established patient",
+      "icd10": [
+        "R51.9"
+      ],
+      "icd10_evidence": {
+        "R51.9": [
+          [
+            517,
+            548
+          ]
+        ]
+      },
+      "note_id": "SYN-014",
+      "text": "CHIEF COMPLAINT: Headaches two to three times a week.\n\nSUBJECTIVE: 39 year old established patient with six weeks of bilateral, band like headaches, mild to moderate, worse at the end of the workday. No aura, no photophobia, no vomiting. No thunderclap onset, no fever, no neck stiffness, no focal weakness. Sleeping poorly, high screen time.\n\nOBJECTIVE: BP 122/76. Neurological examination normal including cranial nerves, strength, sensation, and gait. Fundi sharp. No temporal tenderness.\n\nASSESSMENT AND PLAN:\n1. Headache, no red flag features. Likely tension type. Sleep hygiene and screen breaks reviewed. Ibuprofen as needed, limited to two days a week to avoid medication overuse. Headache diary started. Imaging not indicated.\n\nTime spent: 22 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "85025",
+        "99214"
+      ],
+      "cpt_evidence": {
+        "85025": [
+          [
+            602,
+            665
+          ]
+        ],
+        "99214": [
+          [
+            667,
+            719
+          ]
+        ]
+      },
+      "description": "Obesity and hyperlipidemia counseling",
+      "icd10": [
+        "E66.9",
+        "E78.5"
+      ],
+      "icd10_evidence": {
+        "E66.9": [
+          [
+            394,
+            424
+          ]
+        ],
+        "E78.5": [
+          [
+            513,
+            562
+          ]
+        ]
+      },
+      "note_id": "SYN-015",
+      "text": "CHIEF COMPLAINT: Weight and cholesterol follow up.\n\nSUBJECTIVE: 44 year old established patient returns to discuss weight and lipid results. Weight has increased 14 pounds over two years. Recent lipid panel showed LDL 168, triglycerides 210. Diet is largely takeout, minimal activity. No chest pain, no claudication.\n\nOBJECTIVE: BP 128/82. Weight 232 pounds. BMI 34.8.\n\nASSESSMENT AND PLAN:\n1. Obesity, unspecified, BMI 34.8. Nutrition referral placed, structured activity goal of 150 minutes per week agreed.\n2. Hyperlipidemia. Start atorvastatin 20 mg nightly. Repeat lipid panel in twelve weeks.\n3. Complete blood count with automated differential ordered today.\n\nTotal time on the date of the encounter: 31 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99213"
+      ],
+      "cpt_evidence": {
+        "99213": [
+          [
+            671,
+            694
+          ]
+        ]
+      },
+      "description": "Acute sinusitis",
+      "icd10": [
+        "J01.90"
+      ],
+      "icd10_evidence": {
+        "J01.90": [
+          [
+            465,
+            511
+          ]
+        ]
+      },
+      "note_id": "SYN-016",
+      "text": "CHIEF COMPLAINT: Facial pressure and congestion for eleven days.\n\nSUBJECTIVE: 33 year old established patient with eleven days of nasal congestion and facial pressure that initially improved around day five and then worsened, with new purulent nasal discharge and maxillary tooth pain. Low grade fever.\n\nOBJECTIVE: Temp 100.1 F. Maxillary sinus tenderness bilaterally. Purulent discharge in the nasal cavity. Oropharynx clear. Lungs clear.\n\nASSESSMENT AND PLAN:\n1. Acute sinusitis with double worsening pattern. Amoxicillin clavulanate 875/125 mg twice daily for seven days. Saline irrigation and intranasal steroid.\nReturn if symptoms worsen or visual changes develop.\n\nTime spent: 20 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99213"
+      ],
+      "cpt_evidence": {
+        "99213": [
+          [
+            594,
+            617
+          ]
+        ]
+      },
+      "description": "Streptococcal pharyngitis",
+      "icd10": [
+        "J02.9"
+      ],
+      "icd10_evidence": {
+        "J02.9": [
+          [
+            444,
+            477
+          ]
+        ]
+      },
+      "note_id": "SYN-017",
+      "text": "CHIEF COMPLAINT: Sore throat and fever for two days.\n\nSUBJECTIVE: 19 year old established patient with sudden onset sore throat, fever to 101.5 F at home, and painful swallowing. No cough, no congestion. Roommate had similar symptoms last week.\n\nOBJECTIVE: Temp 101.2 F. Tonsillar erythema with exudate. Tender anterior cervical adenopathy. No cough. Centor score 4.\n\nLABORATORY: Rapid antigen detection test positive.\n\nASSESSMENT AND PLAN:\n1. Acute pharyngitis, streptococcal. Penicillin VK 500 mg twice daily for ten days. Supportive care. May return to class after 24 hours of antibiotics.\n\nTime spent: 18 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99212"
+      ],
+      "cpt_evidence": {
+        "99212": [
+          [
+            620,
+            643
+          ]
+        ]
+      },
+      "description": "Negation and history, no codeable acute condition",
+      "icd10": [
+        "Z00.00"
+      ],
+      "icd10_evidence": {
+        "Z00.00": [
+          [
+            465,
+            539
+          ]
+        ]
+      },
+      "note_id": "SYN-018",
+      "text": "CHIEF COMPLAINT: Medication refill and questions.\n\nSUBJECTIVE: 47 year old established patient here for a refill. Reports no chest pain, no shortness of breath, no cough, no fever, no abdominal pain, and no urinary symptoms. Mother has type 2 diabetes and father has hypertension. Patient had asthma as a child, none since age 12, and uses no inhalers. Denies any current complaints.\n\nOBJECTIVE: BP 116/72. HR 68. Examination unremarkable.\n\nASSESSMENT AND PLAN:\n1. Encounter for general adult medical examination without abnormal findings. Refills provided. Routine screening current. No new problems identified today.\n\nTime spent: 13 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "36415",
+        "99213"
+      ],
+      "cpt_evidence": {
+        "36415": [
+          [
+            700,
+            761
+          ]
+        ],
+        "99213": [
+          [
+            763,
+            786
+          ]
+        ]
+      },
+      "description": "Abdominal pain, undifferentiated",
+      "icd10": [
+        "R10.9"
+      ],
+      "icd10_evidence": {
+        "R10.9": [
+          [
+            508,
+            555
+          ]
+        ]
+      },
+      "note_id": "SYN-019",
+      "text": "CHIEF COMPLAINT: Stomach pain on and off for a week.\n\nSUBJECTIVE: 31 year old established patient with a week of intermittent, crampy periumbilical abdominal pain, not clearly related to meals. No vomiting, no diarrhea, no blood in stool, no fever, no urinary symptoms. Appetite normal. Last menstrual period one week ago.\n\nOBJECTIVE: Temp 98.2 F. Abdomen soft, mild diffuse tenderness without guarding or rebound. No masses. Bowel sounds normal. No costovertebral angle tenderness.\n\nASSESSMENT AND PLAN:\n1. Unspecified abdominal pain, benign examination. Basic laboratory studies ordered. Trial of dietary modification. Return precautions for fever, vomiting, or focal right lower quadrant pain.\n2. Routine venipuncture performed today for the ordered studies.\n\nTime spent: 26 minutes."
+    },
+    {
+      "category": "Office Visit",
+      "cpt": [
+        "99213"
+      ],
+      "cpt_evidence": {
+        "99213": [
+          [
+            715,
+            738
+          ]
+        ]
+      },
+      "description": "Hand pain, established patient",
+      "icd10": [
+        "M79.641"
+      ],
+      "icd10_evidence": {
+        "M79.641": [
+          [
+            510,
+            549
+          ]
+        ]
+      },
+      "note_id": "SYN-020",
+      "text": "CHIEF COMPLAINT: Right hand aching for a month.\n\nSUBJECTIVE: 53 year old established patient reports a month of aching in the right hand, worse in the morning and after typing. No injury. No numbness or tingling in a specific nerve distribution. No swelling of the small joints, no redness.\n\nOBJECTIVE: Right hand without deformity or synovitis. Tenderness at the base of the thumb and across the dorsum. Grip strength mildly reduced compared with the left. Tinel and Phalen negative.\n\nASSESSMENT AND PLAN:\n1. Pain in the right hand, likely overuse. Ergonomic assessment at work recommended, wrist neutral position, frequent breaks. Topical diclofenac. Reassess in six weeks and consider imaging if not improving.\n\nTime spent: 19 minutes."
+    }
+  ],
+  "tier": 0,
+  "version": 1
+}

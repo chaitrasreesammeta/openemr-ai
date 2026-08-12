@@ -11,3 +11,21 @@ openemr_whisper_wer/data/fareez_osce/
 # Manuscript (not tracked in git)
 manuscript/
 .ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Local design notes, not for the public repo
+docs/coding-benchmark-design.md
+docs/coding-ehr-integration-design.md
+
+# Tier 2 restricted data. Never commit note text in any container format.
+coding_bench/data/gold/
+**/*.parquet
+**/*.pkl
+**/*.pickle
+NOTEEVENTS*
+with_text/
+
+# Local benchmark scratch
+coding_bench/results/predictions/
