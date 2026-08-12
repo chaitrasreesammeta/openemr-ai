@@ -58,8 +58,23 @@ GPU = "RTX-PRO-6000"
 # The real speedup. At batch size 1 the GPU spends most of its time waiting on
 # weight reads, so serving several notes at once costs almost nothing per extra
 # note. Slots share --ctx-size between them, hence the large total.
-PARALLEL_SLOTS = 8
-CONTEXT_PER_SLOT = 20480
+#
+# Four slots rather than eight, because a slot has to hold the whole
+# conversation. Eight was sized when this model had only ever seen gold
+# candidates, where the longest prompt in the 578 note set is 8,228 tokens and
+# 20,480 is generous. The full catalogue offers all 673 codes and measures
+# 10,920 tokens on average with a longest of 19,130, which together with the
+# 16,384 token generation budget needs 35,514 in the worst case. At 20,480 a
+# long note would have overflowed its slot and come back truncated, which
+# scores as an empty answer and still costs full price for the GPU time.
+#
+# Halving the slots to pay for it keeps TOTAL_CONTEXT where it was, so the KV
+# cache is exactly the size already known to fit on this card. Throughput drops
+# by less than the slot count suggests: at 11k tokens of prompt per note the
+# server spends much of its time in prefill, which does not batch the way
+# generation does.
+PARALLEL_SLOTS = 4
+CONTEXT_PER_SLOT = 40960
 TOTAL_CONTEXT = PARALLEL_SLOTS * CONTEXT_PER_SLOT
 
 # The upstream server image ships the binary in /app alongside its ggml shared
