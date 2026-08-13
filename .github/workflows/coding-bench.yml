@@ -1,31 +1,38 @@
-name: Coding Bench Full
+name: Coding Bench
 
-# Runs the leaderboard set on every push that touches this package, and on
-# demand. It is safe to run on push for one reason: **the prediction cache
-# means an evaluation is only expensive the first time.**
+# One workflow, two jobs, because the second must not run when the first fails.
 #
-# A note is regenerated only when something that can change its answer changed:
+# Split across two files, `checks` and `evaluate` ran in parallel, so a commit
+# that broke the test suite still triggered paid inference: the tests went red
+# at minute one while the evaluation spent twenty dollars discovering the same
+# thing at minute thirty. `needs: checks` closes that.
+#
+# The two jobs do genuinely different work and neither is redundant:
+#
+#   checks    Tier 0 only. No Modal token, no provider key, so it structurally
+#             cannot run inference or spend anything. Runs on pull requests too.
+#   evaluate  Tier 2. Runs the leaderboard set against Modal and commits the
+#             records. Never runs on a pull request: a fork PR cannot have the
+#             secrets anyway, and paying for a stranger's branch is not a thing
+#             this repo should do.
+#
+# ## Why evaluating on every push is affordable
+#
+# The prediction cache means an evaluation is only expensive the first time. A
+# note is regenerated only when something that can change its answer changed:
 # the gold manifest checksum, the model, the adapter file hash, the prompt hash,
-# the offered candidate list, or the run parameters. Everything else is served
-# from cache. So a push that edits a docstring re-runs the whole set for the
-# price of container time, recomputes the metrics, and posts the summary. A push
-# that edits an adapter pays for that model's notes and no others.
+# the offered candidate list, or the run parameters. A push that edits a
+# docstring re-runs the whole set for the price of container time; a push that
+# edits an adapter pays for that model's notes and no others.
 #
-# ## The one push that is not cheap
+# The exception is a change to the prompt in `approaches/llm.py` or to the gold
+# manifests, which are in *every* model's cache key. `evaluate` refuses to do
+# that from a push and asks for a manual dispatch with `confirm_full_rerun`, so
+# a whole-leaderboard re-run is always someone's decision.
 #
-# Changing the prompt in `approaches/llm.py`, or rebuilding the gold set,
-# invalidates the cache for **every model at once**, which is the whole
-# leaderboard's worth of inference. This workflow refuses to do that from a
-# push. It stops, says what it found, and asks for a manual dispatch with
-# `confirm_full_rerun: true`, so a global re-run is always somebody's decision
-# rather than a side effect of an edit.
-#
-# ## GPU models are not in the push set
-#
-# Muse and Gemma run on a GPU, take hours, and are launched as detached chains
-# that outlive any client. Blocking a runner on one would burn 350 minutes of
-# Actions time and lose the in flight step if the runner died. Dispatch with
-# `action: collect` to bank a detached run that has finished.
+# GPU models are not in the push set. Muse and Gemma take hours and run as
+# detached chains that outlive any client; dispatch with `action: collect` to
+# bank one that has finished.
 #
 # Credentials: MODAL_TOKEN_ID and MODAL_TOKEN_SECRET only. The provider keys are
 # Modal secrets (`groq-api`, `anthropic-api`) that eval_remote.py declares and
@@ -35,7 +42,11 @@ on:
   push:
     paths:
       - 'coding_bench/**'
-      - '.github/workflows/coding-bench-full.yml'
+      - '.github/workflows/coding-bench.yml'
+  pull_request:
+    paths:
+      - 'coding_bench/**'
+      - '.github/workflows/coding-bench.yml'
   workflow_dispatch:
     inputs:
       action:
@@ -57,28 +68,118 @@ on:
         default: '3'
 
 permissions:
-  # Results live in git: the leaderboard is generated from committed run
-  # records, so a run that cannot commit leaves the leaderboard untrue.
-  contents: write
+  contents: read
 
 concurrency:
-  # Serialised per branch. Two of these committing records would race on the
-  # same push, and they would also duplicate paid inference on a cache miss.
-  group: coding-bench-full-${{ github.ref }}
+  group: coding-bench-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  evaluate:
+  checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Full history. The guard below diffs the whole pushed range, and a
-          # push of several commits is normal here; a shallow clone would let
-          # everything but the last commit through unexamined.
+          # The restricted data scan diffs against main, so the merge base has
+          # to be present.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install
+        # `modal` and `anthropic` are client libraries, not credentials.
+        # Installing them lets the adapter tests import and check model ids,
+        # stop reasons and the declared adapter equivalences, which are skipped
+        # without them. With no token set they still cannot reach anything.
+        run: pip install -e './coding_bench[dev,modal,anthropic]'
+
+      - name: Tests
+        id: tests
+        run: |
+          set -o pipefail
+          python -m pytest coding_bench/tests -q 2>&1 | tee /tmp/pytest.log
+
+      - name: Metrics match the predictions
+        id: rescore
+        # A change to metrics.py does not need an inference run: every
+        # prediction is already committed. The fix this names costs nothing.
+        run: python -m coding_bench.bench.rescore --check
+
+      - name: Leaderboard is current
+        id: leaderboard
+        run: python -m coding_bench.bench.reporting --check
+
+      - name: No restricted data
+        id: restricted
+        # Scoped to coding_bench: the other benchmarks here carry result files
+        # over the 1 MB ceiling, and failing on those would teach everyone to
+        # ignore this. `xargs -r` so a run with no changed files passes.
+        run: |
+          set -o pipefail
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git diff --name-only --diff-filter=ACMR origin/main...HEAD -- coding_bench \
+            | xargs -r python coding_bench/scripts/check_restricted.py | tee /tmp/restricted.log
+
+      - name: Summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import pathlib, re
+
+          def read(path, default=""):
+              p = pathlib.Path(path)
+              return p.read_text(encoding="utf8") if p.exists() else default
+
+          print("## Coding Bench, checks")
+          print()
+          log = read("/tmp/pytest.log")
+          tail = [l for l in log.splitlines() if any(k in l for k in ("passed", "failed", "error"))]
+          restricted = read("/tmp/restricted.log").strip().splitlines()
+          print("| Check | Result |")
+          print("|---|---|")
+          print(f"| Tier 0 tests | {tail[-1].strip() if tail else 'did not run'} |")
+          print(f"| Metrics match predictions | {'${{ steps.rescore.outcome }}'} |")
+          print(f"| Leaderboard current | {'${{ steps.leaderboard.outcome }}'} |")
+          print(f"| Restricted data scan | {restricted[-1] if restricted else 'no coding_bench files changed'} |")
+          print()
+
+          board = read("coding_bench/results/LEADERBOARD.md")
+          for heading in ("## Results", "## Quarantined runs"):
+              match = re.search(rf"^{re.escape(heading)}$(.*?)(?=^## |\Z)", board, re.M | re.S)
+              if not match:
+                  continue
+              table = [l for l in match.group(1).splitlines() if l.startswith("|")]
+              print(heading)
+              print()
+              print("\n".join(table) if table else "_none_")
+              print()
+          PY
+
+  evaluate:
+    # The gate. Without it, a red test suite still buys inference.
+    needs: checks
+    # Never on a pull request: fork PRs cannot see the secrets, and paying for
+    # somebody else's branch is not something this repo should do by default.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      # Results live in git: the leaderboard is generated from committed run
+      # records, so a run that cannot commit leaves the leaderboard untrue.
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history: the guard below diffs the whole pushed range, and a
+          # push of several commits is normal here.
           fetch-depth: 0
 
       - name: Set up Python
@@ -97,9 +198,6 @@ jobs:
 
       - name: Refuse a global re-run that nobody asked for
         if: inputs.confirm_full_rerun != true
-        # The prompt and the gold manifest are in every model's cache key, so a
-        # change to either means the entire leaderboard is uncached. That is a
-        # decision, not a consequence of pushing.
         run: |
           # The whole pushed range, not just the tip. A push of five commits
           # where the second changes the prompt is exactly the case that would
@@ -122,8 +220,8 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
           # Every configuration on the leaderboard that is reached over HTTP.
-          # GPU models are absent on purpose; see the header. Adding a line here
-          # is how a new model joins the board.
+          # GPU models are absent on purpose. Adding a line here is how a new
+          # model joins the board.
           RUN_SET: |
             icd10 qwen3.6-27b   gold 16384
             icd10 qwen3.6-27b   full 16384
@@ -146,9 +244,9 @@ jobs:
               continue
             fi
             echo "::group::$line"
-            # max_tokens is per configuration and must match the run being
-            # extended: it is in the cache key, so a different value misses
-            # every note and pays full price for work already done.
+            # max_tokens is per configuration and is in the cache key: a
+            # different value misses every note and pays again for work already
+            # done.
             modal run coding_bench/eval_remote.py \
               --task "$task" --model "$model" --candidate-space "$space" \
               --max-tokens "$max_tokens" --concurrency "$conc" 2>&1 | tee -a /tmp/eval.log
@@ -164,9 +262,9 @@ jobs:
           modal run coding_bench/run_chain.py::fetch 2>&1 | tee -a /tmp/eval.log
 
       - name: Rescore and regenerate
-        # Neither step calls a model. Rescore first, so a metrics change is
-        # applied to every record rather than leaving the new one consistent
-        # and the older ones stale.
+        # Neither step calls a model. Rescore first, so a metrics change reaches
+        # every record rather than leaving the new one consistent and the older
+        # ones stale.
         run: |
           python -m coding_bench.bench.rescore
           python -m coding_bench.bench.reporting
@@ -212,25 +310,20 @@ jobs:
               p = pathlib.Path(path)
               return p.read_text(encoding="utf8") if p.exists() else default
 
-          print("## Coding Bench")
+          print("## Coding Bench, evaluation")
           print()
 
-          # What each configuration actually did. cache_hits equal to n means
-          # the run cost nothing but container time, which is the normal case.
+          # What each configuration did. Every note a cache hit means the run
+          # cost container time only, which is the normal case.
           log = read("/tmp/eval.log")
-          rows = []
-          header, hits = None, None
+          rows, header = [], None
           for line in log.splitlines():
               if line.startswith("llm /"):
                   header = line.strip()
-              elif line.startswith("Cache seeded"):
-                  continue
               elif header and line.strip().startswith("micro F1"):
                   rows.append(f"{header}\n    {line.strip()}")
                   header = None
           if rows:
-              print("### This run")
-              print()
               print("```")
               print("\n".join(rows))
               print("```")
