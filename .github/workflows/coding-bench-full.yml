@@ -1,0 +1,267 @@
+name: Coding Bench Full
+
+# Runs the leaderboard set on every push that touches this package, and on
+# demand. It is safe to run on push for one reason: **the prediction cache
+# means an evaluation is only expensive the first time.**
+#
+# A note is regenerated only when something that can change its answer changed:
+# the gold manifest checksum, the model, the adapter file hash, the prompt hash,
+# the offered candidate list, or the run parameters. Everything else is served
+# from cache. So a push that edits a docstring re-runs the whole set for the
+# price of container time, recomputes the metrics, and posts the summary. A push
+# that edits an adapter pays for that model's notes and no others.
+#
+# ## The one push that is not cheap
+#
+# Changing the prompt in `approaches/llm.py`, or rebuilding the gold set,
+# invalidates the cache for **every model at once**, which is the whole
+# leaderboard's worth of inference. This workflow refuses to do that from a
+# push. It stops, says what it found, and asks for a manual dispatch with
+# `confirm_full_rerun: true`, so a global re-run is always somebody's decision
+# rather than a side effect of an edit.
+#
+# ## GPU models are not in the push set
+#
+# Muse and Gemma run on a GPU, take hours, and are launched as detached chains
+# that outlive any client. Blocking a runner on one would burn 350 minutes of
+# Actions time and lose the in flight step if the runner died. Dispatch with
+# `action: collect` to bank a detached run that has finished.
+#
+# Credentials: MODAL_TOKEN_ID and MODAL_TOKEN_SECRET only. The provider keys are
+# Modal secrets (`groq-api`, `anthropic-api`) that eval_remote.py declares and
+# Modal resolves server side, so no provider key passes through GitHub.
+
+on:
+  push:
+    paths:
+      - 'coding_bench/**'
+      - '.github/workflows/coding-bench-full.yml'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'evaluate the set, or collect finished detached GPU runs'
+        type: choice
+        options: [evaluate, collect]
+        default: evaluate
+      only:
+        description: 'substring filter over the run set, e.g. sonnet or icd10. Empty runs all.'
+        type: string
+        default: ''
+      confirm_full_rerun:
+        description: 'required when the prompt or gold set changed; re-runs every model'
+        type: boolean
+        default: false
+      concurrency:
+        description: 'in flight requests per run; Groq saturates around 2 to 3'
+        type: string
+        default: '3'
+
+permissions:
+  # Results live in git: the leaderboard is generated from committed run
+  # records, so a run that cannot commit leaves the leaderboard untrue.
+  contents: write
+
+concurrency:
+  # Serialised per branch. Two of these committing records would race on the
+  # same push, and they would also duplicate paid inference on a cache miss.
+  group: coding-bench-full-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history. The guard below diffs the whole pushed range, and a
+          # push of several commits is normal here; a shallow clone would let
+          # everything but the last commit through unexamined.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install
+        run: pip install -e './coding_bench[dev,modal,anthropic]'
+
+      - name: Authenticate Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
+
+      - name: Refuse a global re-run that nobody asked for
+        if: inputs.confirm_full_rerun != true
+        # The prompt and the gold manifest are in every model's cache key, so a
+        # change to either means the entire leaderboard is uncached. That is a
+        # decision, not a consequence of pushing.
+        run: |
+          # The whole pushed range, not just the tip. A push of five commits
+          # where the second changes the prompt is exactly the case that would
+          # otherwise slip through and re-infer the entire leaderboard.
+          base="${{ github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base="HEAD~1"   # manual dispatch, or a new branch with no before
+          fi
+          echo "Inspecting $base..HEAD"
+          changed=$(git diff --name-only "$base" HEAD 2>/dev/null || true)
+          if echo "$changed" | grep -qE 'coding_bench/(approaches/llm\.py|data/manifests/)'; then
+            echo "::error::This change invalidates every model's cache (prompt or gold set), so running the set would re-infer the whole leaderboard. Dispatch manually with confirm_full_rerun: true if that is what you want."
+            exit 1
+          fi
+          echo "No global cache invalidation in this change."
+
+      - name: Evaluate the run set
+        if: inputs.action != 'collect'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          # Every configuration on the leaderboard that is reached over HTTP.
+          # GPU models are absent on purpose; see the header. Adding a line here
+          # is how a new model joins the board.
+          RUN_SET: |
+            icd10 qwen3.6-27b   gold 16384
+            icd10 qwen3.6-27b   full 16384
+            icd10 gpt-oss-120b  gold 4096
+            icd10 gpt-oss-120b  full 8192
+            cpt   qwen3.6-27b   gold 16384
+            cpt   qwen3.6-27b   full 16384
+            cpt   gpt-oss-120b  gold 16384
+            cpt   gpt-oss-120b  full 16384
+            icd10 sonnet-5      gold 16384
+        run: |
+          set -o pipefail
+          only="${{ inputs.only }}"
+          conc="${{ inputs.concurrency }}"; conc="${conc:-3}"
+          echo "$RUN_SET" | while read -r task model space max_tokens; do
+            [ -z "$task" ] && continue
+            line="$task $model $space"
+            if [ -n "$only" ] && ! echo "$line" | grep -q "$only"; then
+              echo "skipping $line (filtered by '$only')"
+              continue
+            fi
+            echo "::group::$line"
+            # max_tokens is per configuration and must match the run being
+            # extended: it is in the cache key, so a different value misses
+            # every note and pays full price for work already done.
+            modal run coding_bench/eval_remote.py \
+              --task "$task" --model "$model" --candidate-space "$space" \
+              --max-tokens "$max_tokens" --concurrency "$conc" 2>&1 | tee -a /tmp/eval.log
+            echo "::endgroup::"
+          done
+
+      - name: Collect finished detached runs
+        if: inputs.action == 'collect'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -o pipefail
+          modal run coding_bench/run_chain.py::fetch 2>&1 | tee -a /tmp/eval.log
+
+      - name: Rescore and regenerate
+        # Neither step calls a model. Rescore first, so a metrics change is
+        # applied to every record rather than leaving the new one consistent
+        # and the older ones stale.
+        run: |
+          python -m coding_bench.bench.rescore
+          python -m coding_bench.bench.reporting
+
+      - name: Guard the records before committing
+        run: |
+          git add -A coding_bench/results
+          git diff --cached --name-only | xargs -r python coding_bench/scripts/check_restricted.py
+
+      - name: Commit results
+        run: |
+          if git diff --cached --quiet; then
+            echo "Nothing changed: every run was served from cache and the metrics already matched."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Bank coding_bench results from CI"
+          # Rebase before pushing. These runs are long enough that someone can
+          # push meanwhile, and a rejected push after paid inference would
+          # strand the result.
+          git fetch origin "${{ github.ref_name }}"
+          if ! git rebase "origin/${{ github.ref_name }}"; then
+            git checkout --ours coding_bench/results/LEADERBOARD.md 2>/dev/null || true
+            git add -A coding_bench/results
+            GIT_EDITOR=true git rebase --continue || {
+              echo "::error::Rebase failed. The records are in the run artifact and nothing is lost; commit them by hand."
+              exit 1
+            }
+            python -m coding_bench.bench.reporting
+            git add -A coding_bench/results
+            git diff --cached --quiet || git commit --amend --no-edit
+          fi
+          git push origin "HEAD:${{ github.ref_name }}"
+
+      - name: Summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import pathlib, re
+
+          def read(path, default=""):
+              p = pathlib.Path(path)
+              return p.read_text(encoding="utf8") if p.exists() else default
+
+          print("## Coding Bench")
+          print()
+
+          # What each configuration actually did. cache_hits equal to n means
+          # the run cost nothing but container time, which is the normal case.
+          log = read("/tmp/eval.log")
+          rows = []
+          header, hits = None, None
+          for line in log.splitlines():
+              if line.startswith("llm /"):
+                  header = line.strip()
+              elif line.startswith("Cache seeded"):
+                  continue
+              elif header and line.strip().startswith("micro F1"):
+                  rows.append(f"{header}\n    {line.strip()}")
+                  header = None
+          if rows:
+              print("### This run")
+              print()
+              print("```")
+              print("\n".join(rows))
+              print("```")
+              print()
+
+          board = read("coding_bench/results/LEADERBOARD.md")
+          for heading in ("## Results", "## Quarantined runs", "## Head to head"):
+              match = re.search(rf"^{re.escape(heading)}$(.*?)(?=^## |\Z)", board, re.M | re.S)
+              if not match:
+                  continue
+              table = [l for l in match.group(1).splitlines() if l.startswith("|")]
+              print(heading)
+              print()
+              print("\n".join(table) if table else "_none_")
+              print()
+
+          bands = re.search(r"^## Frequency bands$(.*?)(?=^## |\Z)", board, re.M | re.S)
+          if bands:
+              print("<details><summary>Frequency bands, per run</summary>")
+              print()
+              print(bands.group(1).strip())
+              print()
+              print("</details>")
+          PY
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coding-bench-results
+          path: |
+            coding_bench/results/LEADERBOARD.md
+            coding_bench/results/runs/*.json
+          if-no-files-found: warn
