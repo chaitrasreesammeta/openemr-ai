@@ -298,3 +298,40 @@ def test_recompute_empty_stays_out_of_the_cache_key():
     assert "recompute_empty" in runner.NON_SEMANTIC_PARAMETERS
     with_flag = dict(BASE, parameters={"max_tokens": 4096})
     assert cache_module.cache_key(**with_flag) == cache_module.cache_key(**BASE)
+
+
+def test_the_manifest_names_the_parser_without_the_cache_keying_on_it():
+    """The reuse policy, as a test rather than as a convention.
+
+    Reusing a paid prediction is right whenever nothing that could change the
+    answer changed. A parser edit cannot change an answer already stored, so it
+    must not invalidate the cache. It can change how the next response is read,
+    so it has to be on the record. Both halves matter and they pull in opposite
+    directions, which is why this is pinned.
+    """
+    import hashlib
+    from pathlib import Path
+
+    from coding_bench.approaches import llm
+
+    dataset = loaders.load_smoke("cpt")
+
+    class Predictor:
+        name, version, model_id = "llm", "v1", "test"
+
+        def predict(self, note, candidates=None):
+            return Prediction(codes={code: None for code in note.gold_codes})
+
+    record = runner.run(Predictor(), dataset, candidate_space="gold", progress=False)
+    assert record["manifest"]["approach_sha256"] is not None
+
+    # This test's predictor lives in the test module, so the hash is of that
+    # file. What matters is that the mechanism finds the defining module.
+    assert record["manifest"]["approach_sha256"] == hashlib.sha256(
+        Path(__file__).read_bytes()
+    ).hexdigest()
+    assert runner.approach_file(llm.LLMPredictor(client=None)).endswith("llm.py")
+
+    # And the key has no room for it, so it cannot creep in by accident.
+    with pytest.raises(TypeError):
+        cache_module.cache_key(**BASE, approach_sha256="anything")

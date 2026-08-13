@@ -22,6 +22,15 @@ nothing.
 afternoon, not about the model, and caching it would freeze a transient error
 into the results permanently.
 
+**What is deliberately not in the key.** The approach module, meaning the
+prompt building and response parsing in `approaches/`. Editing a parser cannot
+change a prediction that is already stored, only how the next response would be
+read, so keying on it would discard every paid answer in the workspace to fix a
+handful of them. Its hash goes in the run manifest as `approach_sha256` instead,
+so a number can still be traced to the code that produced it, and
+`runner.run(recompute_empty=True)` regenerates exactly the empty notes that a
+parser fix could plausibly change.
+
 **Adapter equivalences** are the one exception to the adapter hash rule, and
 they are narrow on purpose. See `ADAPTER_EQUIVALENCES` below: a fix whose effect
 is understood per note lets the notes it provably cannot have changed keep their

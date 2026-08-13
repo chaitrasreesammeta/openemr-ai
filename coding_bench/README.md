@@ -267,9 +267,24 @@ coding_bench/
   eval_remote.py        Modal entrypoint for Tier 2 evaluation
 ```
 
-## Not built yet
+## CI
 
-The two CI workflows, `coding-bench-smoke.yml` and `coding-bench-full.yml`.
-Until they exist, `python -m coding_bench.bench.reporting --check` is only run
-by whoever remembers to run it, so the leaderboard can go stale in a commit
-without anything objecting.
+`.github/workflows/coding-bench-smoke.yml` runs on every push and pull request
+that touches this package: the Tier 0 suite, `reporting --check`, and the
+restricted data scan over the changed files here. It has no Modal token and no
+provider key, so it cannot run inference and cannot spend anything.
+
+`coding-bench-full.yml` does not exist yet. When it does it must be manual
+dispatch rather than pull request, because Tier 2 evaluation needs the
+PhysioNet credentialed Modal workspace and Actions does not expose secrets to
+forks. It should spawn the detached chain and return, rather than hold a runner
+open for the hours a full run takes.
+
+**Neither workflow re-runs inference that has already been paid for.** A note is
+regenerated only when something that can change its answer changed: the gold
+manifest checksum, the model, the adapter, the prompt, the offered candidates or
+the run parameters. Everything else is served from the prediction cache and from
+the committed run records. Two deliberate exceptions, both narrow and both
+recorded in the run: an adapter equivalence, which lets a fix that provably
+cannot alter an answer keep the old one, and `recompute_empty`, which pays to
+regenerate the notes that came back empty and nothing else.

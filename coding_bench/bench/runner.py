@@ -70,6 +70,14 @@ class RunManifest:
     # inside Modal. Recorded so the provenance of a Tier 2 number is answerable
     # long after the run.
     external_provider: str | None = None
+    # The approach module that parsed the responses, hashed. Deliberately NOT
+    # part of the cache key: a parser change cannot alter a prediction that is
+    # already stored, only how a fresh response would be read, so keying on it
+    # would throw away every paid answer in the workspace to fix a handful of
+    # them. Recorded here instead, so "which parser produced this number" is
+    # answerable without a rerun, and `recompute_empty` regenerates the notes
+    # that a parser fix could actually change.
+    approach_sha256: str | None = None
     parameters: dict = field(default_factory=dict)
     started_at: str = ""
     finished_at: str = ""
@@ -89,6 +97,18 @@ def git_state() -> tuple[str, bool]:
         return sha, dirty
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown", True
+
+
+def approach_file(predictor) -> str | None:
+    """The source file of the approach, found through the object rather than named.
+
+    Naming it would mean a second registry to keep in step with the first, and
+    the failure mode of a stale one is a manifest that points at the wrong code.
+    """
+    import sys
+
+    module = sys.modules.get(type(predictor).__module__)
+    return getattr(module, "__file__", None)
 
 
 def file_sha256(path: Path | str | None) -> str | None:
@@ -404,6 +424,7 @@ def run(
         dataset_manifest_sha256=dataset.manifest_sha256,
         adapter_sha256=file_sha256(adapter_path),
         prompt_sha256=text_sha256(prompt_text),
+        approach_sha256=file_sha256(approach_file(predictor)),
         git_sha=git_sha,
         git_dirty=git_dirty,
         external_provider=external_provider,
