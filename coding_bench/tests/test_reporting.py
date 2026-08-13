@@ -163,3 +163,22 @@ def test_too_few_shared_notes_is_not_compared():
     long_run = with_predictions(make_run("long", 0.8), [str(i) for i in range(200)], True)
     tiny = with_predictions(make_run("tiny", 0.3), [str(i) for i in range(10)], False)
     assert "Head to head" not in reporting.render([long_run, tiny])
+
+
+def test_deduplication_survives_a_record_with_no_start_time():
+    """Coverage decides which run wins, and a missing tiebreak is not fatal.
+
+    `started_at` only separates two runs of the same length. Requiring it took
+    the entire leaderboard down with a KeyError on any record that predated the
+    field or was written by hand.
+    """
+    small = make_run("small", 0.4)
+    small["manifest"]["n_notes"] = 150
+    large = make_run("large", 0.9)
+    for run in (small, large):
+        run["manifest"]["model_id"] = "same-model"
+        run["manifest"].pop("started_at", None)
+
+    rendered = reporting.render([small, large])
+    assert "| 578 |" in rendered
+    assert "| 150 |" not in rendered, "the better covered run supersedes the short one"

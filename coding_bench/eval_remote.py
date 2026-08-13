@@ -67,7 +67,14 @@ ADAPTER_FILES = {
     "gpt-oss-120b": "api_groq.py",
     "muse-glimmer-30b-gguf": "modal_muse_gguf.py",
     "muse-glimmer-30b": "modal_muse.py",
+    "gemma4-26b-a4b-gguf": "modal_gemma4_gguf.py",
 }
+
+# Everything with an adapter that is not reached over someone else's API, which
+# is to say the models whose weights run on our own GPU. Derived rather than
+# listed again, so a model can never appear in one list and be forgotten in the
+# other.
+LOCAL_MODELS = set(ADAPTER_FILES) - set(EXTERNAL_PROVIDERS)
 
 
 def local_git_state() -> tuple[str, bool]:
@@ -126,10 +133,16 @@ def build_predictor(
         # model runs its trace out to the token cap on clinical notes, which is
         # minutes per note. It is a recorded run parameter, not a hidden default.
         client = MuseClient(reasoning_strength=reasoning_strength)
+    elif model == "gemma4-26b-a4b-gguf":
+        from coding_bench.adapters.modal_gemma4_gguf import Gemma4GGUFClient
+
+        # Quantised, and named as such in the run manifest, for the same reason
+        # the Muse GGUF is: a QAT 4 bit build is not the released model.
+        client = Gemma4GGUFClient(reasoning_strength=reasoning_strength)
     else:
         raise ValueError(
             f"Unknown model {model!r}. Known: "
-            f"{sorted(GROQ_MODELS) + ['muse-glimmer-30b-gguf', 'muse-glimmer-30b']}"
+            f"{sorted(GROQ_MODELS) + sorted(LOCAL_MODELS)}"
         )
 
     llm = LLMPredictor(client=client, code_system=code_system, max_tokens=max_tokens)

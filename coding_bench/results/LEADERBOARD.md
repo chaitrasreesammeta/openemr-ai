@@ -28,6 +28,8 @@ These runs exceeded the 5% failure ceiling. Failed notes score as empty predicti
 
 | Model | Task | Candidates | n | Failed | Truncated | Reported micro F1 (not valid) |
 |---|---|---|---:|---:|---:|---:|
+| google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 10.9% | 10.9% | 0.649 |
+| google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 9.9% | 9.9% | 0.654 |
 | qwen/qwen3.6-27b | icd10 | full | 578 | 5.0% | 2.6% | 0.513 |
 
 ## Head to head
@@ -145,6 +147,8 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 
 ## Provenance
 
+- `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260812T022922Z`: dataset `3e4376d906ea`, git `a5d3c7a960de`, provider modal only
+- `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260812T035127Z`: dataset `3e4376d906ea`, git `4d973679a655`, provider modal only
 - `cpt__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260812T012652Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider modal only
 - `cpt__llm__openai-gpt-oss-120b__candfull__20260812T012657Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260811T234611Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq

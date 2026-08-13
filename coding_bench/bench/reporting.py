@@ -167,7 +167,11 @@ def deduplicate(runs: list[dict]) -> list[dict]:
     for run in runs:
         manifest = run["manifest"]
         key = (manifest["model_id"], manifest["task"], str(manifest["candidate_space"]))
-        rank = (manifest["n_notes"], manifest["started_at"])
+        # `started_at` only breaks ties between runs of equal length, so a
+        # record without one still sorts correctly on coverage. Reading it
+        # directly took the whole leaderboard down with a KeyError instead,
+        # which is a steep price for a field that is only a tiebreak.
+        rank = (manifest["n_notes"], manifest.get("started_at", ""))
         if key not in best or rank > best[key][0]:
             best[key] = (rank, run)
     return [run for _rank, run in best.values()]

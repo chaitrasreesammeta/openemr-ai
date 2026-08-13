@@ -109,6 +109,7 @@ that predicts how a model behaves against a real catalogue.
 | `gpt-oss-120b` | Groq, `openai/gpt-oss-120b` | Yes, to Groq |
 | `muse-glimmer-30b-gguf` | Modal H100, llama.cpp, `Muse-Glimmer-30B-GGUF:kquant-dynamic` | No |
 | `muse-glimmer-30b` | Modal H100, transformers, bf16 weights | No |
+| `gemma4-26b-a4b-gguf` | Modal GPU, llama.cpp, `gemma-4-26B-A4B-it:qat-UD-Q4_K_XL` | No |
 | `retrieval` | CPU, BGE embeddings | No |
 
 The two Groq models post note text to a hosted inference service. The
@@ -139,6 +140,15 @@ it is not practical at this scale: vLLM 0.27.1 does not register the
 generation, which measured at roughly six minutes per note and put a 578 note
 run near sixty hours. llama.cpp exists in this repo because of that number, not
 out of preference.
+
+**Gemma 4 is quantised too, and its adapter is a reconstruction.** The model is
+a mixture of experts, 26B parameters with about 4B active per token, served as
+Google's QAT weights in Unsloth's dynamic 4 bit build. Its id carries that build
+for the same reason Muse's does. Two runs of it are banked, both quarantined,
+and the adapter that produced them was written on another machine and never
+pushed, so `adapters/modal_gemma4_gguf.py` reproduces the configuration their
+manifests record rather than the original bytes. Their `adapter_sha256` will not
+match the committed file, and the docstring says so at the top.
 
 ## Cost and the prediction cache
 
@@ -225,6 +235,7 @@ coding_bench/
     loaders.py          tier aware loading, checksum verification
     metrics.py          every metric, unit tested against hand computed cases
     runner.py           the evaluation loop and the run record writer
+    reporting.py        LEADERBOARD.md generation, quarantine, head to head
   approaches/
     base.py             the Predictor protocol, Truncated, span location
     retrieval.py        BGE embedding baseline, CPU only
@@ -233,12 +244,15 @@ coding_bench/
   adapters/
     api_groq.py         Qwen 3.6 27B and GPT OSS 120B over HTTP
     modal_muse.py       Muse Glimmer 30B on a Modal H100
+    modal_gemma4_gguf.py  Gemma 4 26B A4B, QAT 4 bit, on a Modal GPU
   scripts/              guard rails
-  tests/                65 tests, no network, no GPU, no restricted data
+  tests/                116 tests, no network, no GPU, no restricted data
   eval_remote.py        Modal entrypoint for Tier 2 evaluation
 ```
 
 ## Not built yet
 
-`reporting.py` and `LEADERBOARD.md` generation, and the two CI workflows
-(`coding-bench-smoke.yml`, `coding-bench-full.yml`).
+The two CI workflows, `coding-bench-smoke.yml` and `coding-bench-full.yml`.
+Until they exist, `python -m coding_bench.bench.reporting --check` is only run
+by whoever remembers to run it, so the leaderboard can go stale in a commit
+without anything objecting.
