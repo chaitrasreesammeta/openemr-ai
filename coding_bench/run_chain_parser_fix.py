@@ -34,6 +34,23 @@ particular gpt-oss at 4,096 and 8,192 rather than the 16,384 default. Getting
 one of them wrong does not fail, it silently misses every note in that run and
 pays full price, which is why they are written out per step rather than
 defaulted.
+
+## What it actually bought, which is not what it looked like it would
+
+The salvage fired on **5 notes across all 11 runs**: 3 in qwen icd10 full, 2 in
+qwen icd10 gold, none anywhere else. Every other point of movement came from
+`recompute_empty` asking again and getting an answer that parsed on the second
+attempt, which means those notes were transient rather than structurally broken.
+
+So the parser bug was real, and notes 716852 and 717377 are proof of it, but it
+was far rarer than the silence counts implied. Most of what looked like the same
+problem was not the same problem. Worth remembering before reading a future
+count of empty predictions as evidence of anything in particular.
+
+The reruns also show how much noise a single run carries. Nothing about these
+models changed, and re-asking their silent notes moved gpt-oss cpt full from
+0.747 to 0.778 and Muse CPT from 0.488 to 0.551. Gemma's failure rate went the
+other way, 5.1% to 5.5%, because the notes it was asked again all ran long.
 """
 
 from __future__ import annotations

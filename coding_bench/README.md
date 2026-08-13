@@ -197,14 +197,22 @@ Truncation is never silently an empty answer. Adapters raise a typed `Truncated`
 error and the runner records it separately, because "the model ran out of
 tokens" and "no codes apply" are opposite findings.
 
-**An empty prediction still hides three different things**, and only one of them
-is a fact about the model. It may be the model genuinely declining to code, or
-the answer arriving in a channel the adapter did not read, which is fixed, or
-the answer being unparseable because the model quoted clinical text containing
-quote marks into JSON without escaping them, which is not fixed. A note that
-came back empty having spent thousands of tokens is the signature of the second
-or third. `scripts/muse_cpt_probe.py` and `scripts/groq_silence_probe.py` tell
-them apart, and either is worth running before believing a low recall.
+**An empty prediction hides four different things**, and only one of them is a
+fact about the model. It may be the model genuinely declining to code. It may be
+the answer arriving in a channel the adapter did not read, which cost 124 of 312
+notes on Gemma 4 before `answer_text` fixed it. It may be the answer being
+unparseable because the model quoted clinical text containing quote marks into
+JSON without escaping them, which `salvage_codes` now recovers. Or it may be
+nothing at all: re-asking the empty notes across every run moved several scores
+by two or three points without anything having changed, so a share of them are
+simply the model answering differently on the day.
+
+A note that came back empty having spent thousands of tokens is the signature of
+the second or third. `scripts/muse_cpt_probe.py` and
+`scripts/groq_silence_probe.py` tell them apart, and either is worth running
+before believing a low recall. Rerun with `recompute_empty` to separate the
+fourth from the rest, since it regenerates exactly the empty notes and leaves
+every priced answer alone.
 
 ## Guard rails
 

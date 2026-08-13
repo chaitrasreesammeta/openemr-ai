@@ -44,10 +44,15 @@ the parser's in-string state, every brace after it is counted in the wrong
 state, no `{...}` span ever closes at depth 0, and a complete answer naming the
 right codes is discarded as if the model had said nothing.
 
-This is a parser problem, not an adapter problem, and it is not fixed. It is
-worth roughly 16 notes in qwen icd10 full and 10 in cpt full, and it will be
-costing every model something, since it depends only on whether the note the
-model was asked to quote happens to contain a quote mark.
+This is a parser problem, not an adapter problem. It is fixed in
+`approaches/llm.py::salvage_codes`, and re-running every empty note across all
+eleven leaderboard runs recovered 5 of them, 3 here and 2 in qwen icd10 gold.
+Both notes above are among them.
+
+Five, not the sixteen this run's silence count suggested. The rest of the notes
+that came back empty either answered normally when asked again, or were the
+model genuinely declining. Counting empty predictions tells you where to look,
+and nothing more than that.
 """
 
 from __future__ import annotations
