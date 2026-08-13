@@ -100,6 +100,17 @@ ADAPTER_EQUIVALENCES: tuple[AdapterEquivalence, ...] = (
         after="f97b7b988a9d88bade601b690123b82141bcf837d7fce8f2badcac9b95d8239a",
         why="muse gguf as deployed for the ICD-10 gold run",
     ),
+    # Groq is a stronger case than the other three. Both models return one
+    # channel, `content`, measured note by note with groq_silence_probe.py, so
+    # `answer_text` is a pass through for every response they have ever given
+    # and not only for the ones that produced codes. The rule stays at
+    # answered_normally anyway, because a silent note there is unexplained until
+    # the parser is fixed, and re-running one costs pennies.
+    AdapterEquivalence(
+        before="f852ea635e5823054315c43c4dab7c27aed1e8fa22295daf93d92f4a17745e5c",
+        after="1d1dca0bd67e762fc773c48389606f238183c1065c9d94c400ca383b2608d1f4",
+        why="api_groq before reading channels through answer_text",
+    ),
 )
 
 

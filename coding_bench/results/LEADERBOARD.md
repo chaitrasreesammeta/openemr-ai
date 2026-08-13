@@ -13,10 +13,10 @@ CI regenerates this file and fails if the committed copy differs.
 | qwen/qwen3.6-27b | icd10 | gold | 578 | 0.798 [0.779, 0.818] | 0.561 | 0.916 | 0.671 | 0.353 | 0.5% | 7.6s |
 | openai/gpt-oss-120b | icd10 | gold | 578 | 0.779 [0.758, 0.797] | 0.533 | 0.909 | 0.649 | 0.254 | 0.5% | 2.5s |
 | openai/gpt-oss-120b | cpt | full | 312 | 0.747 [0.699, 0.792] | 0.494 | 0.810 | 0.548 | 0.667 | 0.0% | 1.3s |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | icd10 | gold | 150 | 0.701 [0.669, 0.732] | 0.509 | 0.697 | 0.661 | 0.207 | 0.0% | 98.6s |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | icd10 | gold | 150 | 0.704 [0.672, 0.734] | 0.510 | 0.708 | 0.662 | 0.233 | 0.0% | 96.1s |
 | qwen/qwen3.6-27b | icd10 | full | 578 | 0.521 [0.504, 0.537] | 0.337 | 0.744 | 0.340 | 0.064 | 2.4% | 11.8s |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | gold | 150 | 0.488 [0.398, 0.566] | 0.322 | 0.505 | 0.316 | 0.313 | 0.0% | 18.5s |
 | openai/gpt-oss-120b | icd10 | full | 578 | 0.397 [0.376, 0.418] | 0.208 | 0.602 | 0.243 | 0.054 | 2.2% | 5.6s |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | gold | 150 | 0.333 [0.243, 0.421] | 0.306 | 0.335 | 0.316 | 0.187 | 0.0% | 17.6s |
 
 **Reading the candidate space.** `gold` offers only the note's correct codes, so precision is 1.000 by construction and the F1 is a recall ceiling, not a deployment estimate. `full` offers the whole catalogue and is the condition that predicts real behaviour. A number from one cannot be compared against a number from the other.
 
@@ -30,6 +30,7 @@ These runs exceeded the 5% failure ceiling. Failed notes score as empty predicti
 |---|---|---|---:|---:|---:|---:|
 | google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 10.9% | 10.9% | 0.649 |
 | google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 9.9% | 9.9% | 0.654 |
+| google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 5.1% | 5.1% | 0.710 |
 | qwen/qwen3.6-27b | icd10 | full | 578 | 5.0% | 2.6% | 0.513 |
 
 ## Head to head
@@ -41,24 +42,24 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | micro_f1 | +0.0071 | [-0.0110, +0.0241] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | macro_f1 | -0.0015 | [-0.0659, +0.0512] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | exact_match | +0.0128 | [-0.0192, +0.0449] | no |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.5865 | [+0.5036, +0.6728] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.3982 | [+0.2669, +0.4889] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.6600 | [+0.5867, +0.7333] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.5940 | [+0.5062, +0.6805] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.4268 | [+0.2920, +0.5123] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.6733 | [+0.5933, +0.7533] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.4321 | [+0.3530, +0.5158] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.3821 | [+0.2479, +0.4643] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.5333 | [+0.4533, +0.6133] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.4395 | [+0.3573, +0.5209] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.4107 | [+0.2612, +0.4925] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.5467 | [+0.4600, +0.6267] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | micro_f1 | +0.0958 | [+0.0640, +0.1328] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | macro_f1 | +0.0158 | [-0.0279, +0.0756] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | exact_match | +0.1763 | [+0.1314, +0.2212] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | micro_f1 | +0.0197 | [-0.0024, +0.0396] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | macro_f1 | +0.0279 | [-0.0009, +0.0571] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | exact_match | +0.0986 | [+0.0692, +0.1280] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0606 | [+0.0226, +0.0931] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0528 | [+0.0167, +0.0873] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.1533 | [+0.1000, +0.2133] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0207 | [-0.0297, +0.0633] | no |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0055 | [-0.0436, +0.0481] | no |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.0867 | [+0.0333, +0.1533] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0579 | [+0.0209, +0.0904] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0524 | [+0.0158, +0.0864] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.1267 | [+0.0733, +0.1867] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0180 | [-0.0320, +0.0603] | no |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0051 | [-0.0445, +0.0472] | no |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.0600 | [+0.0067, +0.1200] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | micro_f1 | +0.1242 | [+0.1008, +0.1454] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | macro_f1 | +0.1289 | [+0.1087, +0.1562] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | exact_match | +0.0104 | [-0.0087, +0.0294] | no |
@@ -117,9 +118,9 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
-| head | 10 | 217 | 1.000 | 0.535 | 0.697 | 0.698 |
+| head | 10 | 217 | 1.000 | 0.548 | 0.708 | 0.708 |
 | torso | 35 | 261 | 1.000 | 0.682 | 0.811 | 0.742 |
-| tail | 490 | 766 | 1.000 | 0.493 | 0.661 | 0.489 |
+| tail | 490 | 766 | 1.000 | 0.495 | 0.662 | 0.489 |
 
 ### qwen/qwen3.6-27b, icd10, candidates full
 
@@ -129,6 +130,14 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 0.591 | 0.514 | 0.550 | 0.450 |
 | tail | 516 | 1032 | 0.322 | 0.361 | 0.340 | 0.297 |
 
+### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, cpt, candidates gold
+
+| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| head | 10 | 139 | 1.000 | 0.338 | 0.505 | 0.441 |
+| torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| tail | 13 | 16 | 1.000 | 0.188 | 0.316 | 0.231 |
+
 ### openai/gpt-oss-120b, icd10, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
@@ -137,24 +146,19 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 0.621 | 0.309 | 0.412 | 0.294 |
 | tail | 516 | 1032 | 0.313 | 0.199 | 0.243 | 0.176 |
 
-### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, cpt, candidates gold
-
-| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
-|---|---:|---:|---:|---:|---:|---:|
-| head | 10 | 139 | 1.000 | 0.201 | 0.335 | 0.404 |
-| torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
-| tail | 13 | 16 | 1.000 | 0.188 | 0.316 | 0.231 |
-
 ## Provenance
 
 - `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260812T022922Z`: dataset `3e4376d906ea`, git `a5d3c7a960de`, provider modal only
 - `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260812T035127Z`: dataset `3e4376d906ea`, git `4d973679a655`, provider modal only
+- `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260813T130241Z`: dataset `3e4376d906ea`, git `0831276676e5`, provider modal only
 - `cpt__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260812T012652Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider modal only
+- `cpt__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260813T133934Z`: dataset `3e4376d906ea`, git `0831276676e5`, provider modal only
 - `cpt__llm__openai-gpt-oss-120b__candfull__20260812T012657Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260811T234611Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candfull__20260812T012944Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260812T000303Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq
 - `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260811T225054Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider modal only
+- `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260813T134819Z`: dataset `0b6d503e3b12`, git `0831276676e5`, provider modal only
 - `icd10__llm__openai-gpt-oss-120b__candfull__20260811T222448Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260811T201458Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260811T230052Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider groq

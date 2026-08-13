@@ -197,6 +197,15 @@ Truncation is never silently an empty answer. Adapters raise a typed `Truncated`
 error and the runner records it separately, because "the model ran out of
 tokens" and "no codes apply" are opposite findings.
 
+**An empty prediction still hides three different things**, and only one of them
+is a fact about the model. It may be the model genuinely declining to code, or
+the answer arriving in a channel the adapter did not read, which is fixed, or
+the answer being unparseable because the model quoted clinical text containing
+quote marks into JSON without escaping them, which is not fixed. A note that
+came back empty having spent thousands of tokens is the signature of the second
+or third. `scripts/muse_cpt_probe.py` and `scripts/groq_silence_probe.py` tell
+them apart, and either is worth running before believing a low recall.
+
 ## Guard rails
 
 ```bash
@@ -245,8 +254,8 @@ coding_bench/
     api_groq.py         Qwen 3.6 27B and GPT OSS 120B over HTTP
     modal_muse.py       Muse Glimmer 30B on a Modal H100
     modal_gemma4_gguf.py  Gemma 4 26B A4B, QAT 4 bit, on a Modal GPU
-  scripts/              guard rails
-  tests/                116 tests, no network, no GPU, no restricted data
+  scripts/              guard rails, and probes for why a model went quiet
+  tests/                128 tests, no network, no GPU, no restricted data
   eval_remote.py        Modal entrypoint for Tier 2 evaluation
 ```
 

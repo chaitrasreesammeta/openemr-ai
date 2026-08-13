@@ -82,7 +82,14 @@ class Completion:
 REASONING_CHANNELS = ("reasoning_content", "reasoning")
 
 
-def answer_text(message: dict) -> str:
+def _channel(message, name: str) -> str:
+    """One channel, from a dict or from a provider SDK's response object."""
+    if isinstance(message, dict):
+        return message.get(name) or ""
+    return getattr(message, name, None) or ""
+
+
+def answer_text(message) -> str:
     """The generated text, wherever the provider decided to put it.
 
     OpenAI compatible servers split a reasoning model's output into channels:
@@ -104,12 +111,18 @@ def answer_text(message: dict) -> str:
     expects to find the answer inside a reasoning trace, since extract_json
     takes the last object carrying codes rather than the first, but a model cut
     off mid thought has no answer anywhere and stays a truncation.
+
+    Groq does not split channels for either model in this benchmark: their
+    responses arrive whole in `content`, which was verified per note with
+    scripts/groq_silence_probe.py. This runs there anyway, so that every adapter
+    reads a response the same way and a provider changing its `reasoning_format`
+    default cannot quietly cost a run.
     """
-    content = message.get("content") or ""
+    content = _channel(message, "content")
     if content.strip():
         return content
     for channel in REASONING_CHANNELS:
-        value = message.get(channel) or ""
+        value = _channel(message, channel)
         if value.strip():
             return value
     return ""

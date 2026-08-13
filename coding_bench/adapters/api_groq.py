@@ -8,6 +8,14 @@ Both models are reasoning models. They spend tokens thinking before they answer,
 which is why max_tokens is generous and why truncation has to be checked rather
 than assumed away: a length stop lands mid thought, and the JSON never arrives.
 
+Unlike the two llama.cpp adapters, Groq puts the whole response in `content`
+with no separate reasoning channel, so the channel bug those had never applied
+here. That was checked per note rather than assumed, see
+scripts/groq_silence_probe.py. What the probe did find is a different problem
+that this file cannot fix: qwen quotes clinical text verbatim into its JSON
+without escaping the quote marks in it, which leaves the answer unparseable.
+The evidence is in that script's docstring.
+
 Environment:
     GROQ_API_KEY   required
 """
@@ -17,7 +25,7 @@ from __future__ import annotations
 import os
 import time
 
-from coding_bench.approaches.base import Completion, Truncated
+from coding_bench.approaches.base import Completion, Truncated, answer_text
 
 # Verified against the Groq catalogue on 2026-08-11.
 QWEN_3_6_27B = "qwen/qwen3.6-27b"
@@ -109,7 +117,12 @@ class GroqClient:
 
             usage = response.usage
             return Completion(
-                text=choice.message.content or "",
+                # Measured, not assumed: both of these models return everything
+                # in `content` and no reasoning channel at all, so this is a
+                # pass through today. It is here so that every adapter reads a
+                # response the same way, and so that Groq changing a default
+                # cannot cost a run the way it cost the llama.cpp models.
+                text=answer_text(choice.message),
                 stop_reason=stop_reason,
                 latency_s=elapsed,
                 usage={

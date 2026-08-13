@@ -190,6 +190,28 @@ def test_whitespace_only_content_does_not_count_as_an_answer():
     assert answer_text(message) == "the actual output"
 
 
+def test_channels_are_read_off_a_provider_object_as_well_as_a_dict():
+    """The Groq SDK hands back a model object, not a mapping.
+
+    Reading it with `.get` would raise, and reading it with a bare getattr would
+    silently return an empty answer for every note if the field were ever
+    renamed. Both adapters go through the same function for that reason.
+    """
+
+    class SDKMessage:
+        role = "assistant"
+        content = '{"codes": []}'
+
+    assert answer_text(SDKMessage()) == '{"codes": []}'
+
+    class ThinkingSDKMessage:
+        role = "assistant"
+        content = None
+        reasoning = "the answer was in here"
+
+    assert answer_text(ThinkingSDKMessage()) == "the answer was in here"
+
+
 def test_a_genuinely_empty_response_stays_empty():
     """No channel had anything, so there is nothing to recover and no pretending."""
     assert answer_text({"content": "", "reasoning_content": ""}) == ""
