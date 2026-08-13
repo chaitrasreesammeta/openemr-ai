@@ -176,6 +176,7 @@ def evaluate(
     reasoning_strength: str = "medium",
     cache: str = "auto",
     git_sha: str | None = None,
+    recompute_empty: bool = False,
 ) -> dict:
     """Score one approach against one task. Returns a text free run record."""
     from coding_bench.bench import loaders, runner
@@ -215,7 +216,7 @@ def evaluate(
         candidate_space=space,
         limit=limit,
         parameters={"max_tokens": max_tokens, "approach": approach, "concurrency": concurrency,
-                    "reasoning_strength": reasoning_strength},
+                    "reasoning_strength": reasoning_strength, "recompute_empty": recompute_empty},
         adapter_path=adapter_path,
         prompt_text=prompt_text,
         external_provider=provider,
@@ -224,6 +225,7 @@ def evaluate(
         concurrency=1 if approach in ("retrieval", "retr_llm") else concurrency,
         cache=cache,
         git_sha=git_sha,
+        recompute_empty=recompute_empty,
     )
     print(runner.summarise(record), flush=True)
     return record
@@ -240,6 +242,7 @@ def main(
     concurrency: int = 1,
     reasoning_strength: str = "medium",
     cache: str = "auto",
+    recompute_empty: bool = False,
 ):
     sha, dirty = local_git_state()
     if dirty:
@@ -255,6 +258,7 @@ def main(
         reasoning_strength=reasoning_strength,
         cache=cache,
         git_sha=sha,
+        recompute_empty=recompute_empty,
     )
 
     runs_dir = PACKAGE_DIR / "results" / "runs"

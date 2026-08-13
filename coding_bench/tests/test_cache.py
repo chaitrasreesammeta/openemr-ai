@@ -244,3 +244,57 @@ def test_the_declared_equivalences_name_the_adapters_that_are_actually_here():
     }
     for rule in cache_module.ADAPTER_EQUIVALENCES:
         assert rule.after in here, f"{rule.why}: `after` names no adapter in this checkout"
+
+
+# --------------------------------------------------------------------------
+# Recomputing only the empty answers
+
+
+def test_recompute_empty_reruns_the_silent_notes_and_keeps_the_rest(shared_store):
+    """A parser fix cannot be applied to the cache, only to a fresh response.
+
+    The cache stores the parse, not the text, so an answer that was discarded as
+    unreadable is remembered as an empty prediction and no amount of fixing the
+    parser will change it. This is the flag that pays to generate exactly those
+    notes again while every note that produced codes stays free.
+    """
+    dataset = loaders.load_smoke("icd10")
+
+    class SometimesSilent:
+        name, version, model_id = "llm", "v1", "test"
+
+        def __init__(self, silent_on: set[str]):
+            self.silent_on = silent_on
+            self.calls: list[str] = []
+
+        def predict(self, note, candidates=None):
+            self.calls.append(note.note_id)
+            if note.note_id in self.silent_on:
+                return Prediction(codes={})
+            return Prediction(codes={code: None for code in note.gold_codes})
+
+    silent = {dataset.notes[0].note_id, dataset.notes[1].note_id}
+
+    first = SometimesSilent(silent)
+    runner.run(first, dataset, candidate_space="gold", progress=False)
+    assert len(first.calls) == len(dataset)
+
+    # Nothing changed, so nothing is asked again.
+    second = SometimesSilent(silent)
+    runner.run(second, dataset, candidate_space="gold", progress=False)
+    assert second.calls == []
+
+    # Now only the two that came back empty are paid for a second time.
+    third = SometimesSilent(set())
+    record = runner.run(
+        third, dataset, candidate_space="gold", progress=False, recompute_empty=True
+    )
+    assert sorted(third.calls) == sorted(silent)
+    assert record["metrics"]["operational"]["cache_hits"] == len(dataset) - len(silent)
+
+
+def test_recompute_empty_stays_out_of_the_cache_key():
+    """It steers execution, not the answer, so it must not invalidate anything."""
+    assert "recompute_empty" in runner.NON_SEMANTIC_PARAMETERS
+    with_flag = dict(BASE, parameters={"max_tokens": 4096})
+    assert cache_module.cache_key(**with_flag) == cache_module.cache_key(**BASE)

@@ -41,7 +41,7 @@ FORBIDDEN_KEYS = {"text", "note_text", "note", "covered_text", "raw", "prompt", 
 
 # Recorded in the run manifest for reproducibility, but deliberately excluded
 # from the cache key: they affect how a run executes, never what it answers.
-NON_SEMANTIC_PARAMETERS = {"concurrency"}
+NON_SEMANTIC_PARAMETERS = {"concurrency", "recompute_empty"}
 
 
 class ResultWriterError(RuntimeError):
@@ -157,6 +157,7 @@ def _rebuild(note: Note, offered: set[str], cached: dict) -> tuple[m.NoteResult,
     truncated = bool(cached.get("truncated"))
     latency = float(cached.get("latency_s") or 0.0)
     usage = dict(cached.get("usage") or {})
+    salvaged = bool(cached.get("salvaged"))
 
     result = m.NoteResult(
         note_id=note.note_id,
@@ -180,6 +181,7 @@ def _rebuild(note: Note, offered: set[str], cached: dict) -> tuple[m.NoteResult,
             "usage": usage,
             "error": None,
             "cached": True,
+            "salvaged": salvaged,
         }
     )
     return result, record
@@ -217,6 +219,7 @@ def run(
     cache: str = "auto",
     git_sha: str | None = None,
     progress: bool = True,
+    recompute_empty: bool = False,
 ) -> dict:
     """Evaluate one approach over one dataset and return the full run record.
 
@@ -285,16 +288,24 @@ def run(
 
         key = key_for(note, offered)
         cached = store.get(key)
-        if cached is not None:
+        # An empty cached prediction is the one answer a parser fix can change,
+        # and the cache stores the parse rather than the response, so it cannot
+        # be reinterpreted after the fact. `recompute_empty` pays to generate
+        # exactly those notes again and reuses every note that produced codes.
+        # It steers execution rather than the answer, so it stays out of the
+        # cache key, like concurrency.
+        if cached is not None and not (recompute_empty and not cached.get("codes")):
             return _rebuild(note, offered, cached)
 
         start = time.perf_counter()
         truncated = False
+        salvaged = False
         error = None
         try:
             prediction = predictor.predict(note, candidates)
             codes = dict(prediction.codes)
             truncated = prediction.truncated
+            salvaged = getattr(prediction, "salvaged", False)
             latency = prediction.latency_s or (time.perf_counter() - start)
             usage = prediction.usage
         except Truncated as exc:
@@ -329,6 +340,7 @@ def run(
                 "n_candidates": len(offered),
                 "usage": usage,
                 "error": sanitise_error(error),
+                "salvaged": salvaged,
             }
         )
 
@@ -343,6 +355,7 @@ def run(
                     "truncated": truncated,
                     "usage": usage,
                     "latency_s": latency,
+                    "salvaged": salvaged,
                 },
             )
         return result, record
@@ -407,6 +420,10 @@ def run(
     # means part of this record was produced by code that is not the code the
     # manifest names, which a reader is entitled to know without diffing hashes.
     report["operational"]["cache_carried_forward"] = getattr(store, "carried", 0)
+    # Notes whose codes were recovered from unparseable JSON. They carry no
+    # evidence spans, so a high count here explains an evidence coverage that
+    # would otherwise look like the model having stopped citing its work.
+    report["operational"]["salvaged"] = sum(bool(r.get("salvaged")) for r in records)
 
     return {"manifest": asdict(manifest), "metrics": report, "predictions": records}
 

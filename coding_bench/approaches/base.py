@@ -65,6 +65,10 @@ class Prediction:
     # Provider token counts, for cost per note. No text ever goes here.
     usage: dict[str, int] = field(default_factory=dict)
     error: str | None = None
+    # The codes were recovered from a response whose JSON did not parse, so they
+    # carry no evidence spans. Recorded rather than hidden: it is the difference
+    # between a model that cited its work and one whose citation was unreadable.
+    salvaged: bool = False
 
 
 @dataclass

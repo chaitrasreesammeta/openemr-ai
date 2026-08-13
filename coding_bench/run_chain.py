@@ -143,6 +143,7 @@ def _evaluate_inline(config: dict) -> dict:
             "approach": config["approach"],
             "concurrency": config.get("concurrency", 1),
             "reasoning_strength": config["reasoning_strength"],
+            "recompute_empty": config.get("recompute_empty", False),
         },
         adapter_path=adapter_path,
         prompt_text=prompt_text,
@@ -150,6 +151,7 @@ def _evaluate_inline(config: dict) -> dict:
         concurrency=1 if config["approach"] in ("retrieval", "retr_llm") else config.get("concurrency", 1),
         cache=config["cache"],
         git_sha=config.get("git_sha"),
+        recompute_empty=config.get("recompute_empty", False),
     )
     print(runner.summarise(record), flush=True)
     return record

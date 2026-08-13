@@ -343,3 +343,116 @@ def test_save_and_summarise_a_run(tmp_path):
     assert path.exists()
     assert json.loads(path.read_text())["manifest"]["run_id"] == record["manifest"]["run_id"]
     assert "micro F1 1.000" in runner.summarise(record)
+
+
+# --------------------------------------------------------------------------
+# Salvaging an answer whose JSON does not parse
+
+
+UNESCAPED = (
+    'Thinking about this note.\n'
+    '{"codes": [{"code": "E78.5", "quote": "patient reports "hyperlipidemia" today"}, '
+    '{"code": "I10", "quote": "HTN"}]}'
+)
+
+
+def test_an_unescaped_quote_defeats_strict_parsing():
+    """The bug itself, before the recovery. Established, not assumed.
+
+    An unescaped quote inside a JSON string flips the parser's in-string state.
+    With an even number of them the braces still balance and an object is found,
+    but it will not parse. With an odd number, as in note 716852 of the icd10
+    run, the scan ends inside a string and no object is found at all. Both land
+    on extract_json returning None, which scores as the model saying nothing.
+    """
+    import json
+
+    from coding_bench.approaches.llm import balanced_objects, extract_json
+
+    found = balanced_objects(UNESCAPED)
+    assert len(found) == 1
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(found[0])
+
+    # An inch mark inside the quoted evidence, which is what a clinical note
+    # actually contains. The closing braces are then read as string content.
+    odd = (
+        '{"codes": [{"code": "E78.5", "quote": "reports "hyperlipidemia" today"}, '
+        '{"code": "I10", "quote": "measured 5" today"}]}'
+    )
+    assert odd.count('"') % 2 == 1
+    assert balanced_objects(odd) == []
+
+    for text in (UNESCAPED, odd):
+        assert extract_json(text) is None
+        assert parse_codes(text, "note text") == {}
+
+
+def test_salvage_recovers_the_codes_from_an_unparseable_answer():
+    from coding_bench.approaches.llm import salvage_codes
+
+    assert salvage_codes(UNESCAPED) == {"E78.5": None, "I10": None}
+
+
+def test_salvaged_codes_carry_no_evidence():
+    """The quote is the field that could not be read, so there is none to give.
+
+    Inventing an offset would score as a near miss on the evidence metric rather
+    than as the loss it actually is.
+    """
+    from coding_bench.approaches.llm import salvage_codes
+
+    assert all(span is None for span in salvage_codes(UNESCAPED).values())
+
+
+def test_salvage_respects_the_offered_list():
+    from coding_bench.approaches.llm import salvage_codes
+
+    assert salvage_codes(UNESCAPED, {"I10"}) == {"I10": None}
+
+
+def test_salvage_reads_the_last_answer_not_an_earlier_draft():
+    """Reasoning models restate their answer while thinking and change it."""
+    from coding_bench.approaches.llm import salvage_codes
+
+    text = (
+        'First I thought {"codes": [{"code": "J45.909", "quote": "asthma"}]}\n'
+        'On reflection: {"codes": [{"code": "I10", "quote": "the "real" answer"}]}'
+    )
+    assert salvage_codes(text) == {"I10": None}
+
+
+def test_an_honest_empty_answer_is_never_salvaged_into_codes():
+    """`{"codes": []}` is the model declining, and must survive as a decline."""
+    from coding_bench.approaches.llm import salvage_codes
+
+    text = 'Considering 99213 and 99214 and "code" formats.\n{"codes": []}'
+    assert salvage_codes(text) == {}
+
+
+def test_the_predictor_only_salvages_when_strict_parsing_found_nothing():
+    """The property the whole rerun rests on: a working answer is untouched."""
+    from coding_bench.approaches.llm import LLMPredictor
+
+    class Client:
+        model_id = "test"
+
+        def __init__(self, text):
+            self.text = text
+
+        def complete(self, system, user, max_tokens):
+            from coding_bench.approaches.base import Completion
+
+            return Completion(text=self.text, stop_reason="stop", latency_s=0.1)
+
+    note = Note(note_id="1", text="patient reports hyperlipidemia today", gold_codes=("E78.5",))
+
+    clean = LLMPredictor(client=Client('{"codes": [{"code": "E78.5", "quote": "hyperlipidemia"}]}'))
+    prediction = clean.predict(note, [Candidate("E78.5")])
+    assert prediction.codes == {"E78.5": (16, 30)}
+    assert prediction.salvaged is False
+
+    broken = LLMPredictor(client=Client(UNESCAPED))
+    prediction = broken.predict(note, [Candidate("E78.5"), Candidate("I10")])
+    assert sorted(prediction.codes) == ["E78.5", "I10"]
+    assert prediction.salvaged is True

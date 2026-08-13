@@ -98,12 +98,23 @@ class LLMPredictor:
         elapsed = time.perf_counter() - start
 
         offered = {c.code for c in candidates} if candidates else None
-        codes = parse_codes(completion.text, note.text, offered if self.restrict_to_candidates else None)
+        restrict = offered if self.restrict_to_candidates else None
+        codes = parse_codes(completion.text, note.text, restrict)
+
+        # Strict parsing first, always. The salvage only runs where the strict
+        # path found nothing, so a response that parsed is untouched by it and
+        # this cannot change an answer that already worked.
+        salvaged = False
+        if not codes:
+            codes = salvage_codes(completion.text, restrict)
+            salvaged = bool(codes)
+
         return Prediction(
             codes=codes,
             truncated=False,
             latency_s=completion.latency_s or elapsed,
             usage=completion.usage,
+            salvaged=salvaged,
         )
 
 
@@ -193,6 +204,48 @@ def extract_json(text: str) -> dict | None:
 
     with_codes = [value for value in parsed if "codes" in value]
     return with_codes[-1] if with_codes else parsed[-1]
+
+
+# A code inside a JSON field, e.g. {"code": "M54.50", ...}. Codes never contain
+# a quote or a backslash, so this pattern cannot run past the end of its own
+# string the way a general value pattern would.
+_CODE_FIELD = re.compile(r'"code"\s*:\s*"([^"\\]{1,24})"')
+
+
+def salvage_codes(response: str, restrict_to: set[str] | None = None) -> dict[str, None]:
+    """Recover codes from an answer whose JSON does not parse.
+
+    The prompt asks for a verbatim quote from the note beside every code, and
+    clinical notes contain quote marks. Models copy them in without escaping
+    them, and a single unescaped quote inside a JSON string flips the parser's
+    in-string state: every brace after it is counted in the wrong state, no
+    object ever closes at depth zero, and a complete answer is discarded as
+    though the model had said nothing. It cost qwen 16 notes in one 578 note
+    run, each of them naming the right codes in text nobody could read.
+
+    Only the span after the last `"codes"` is scanned. Reasoning models restate
+    their answer while thinking, so an earlier match is a draft the model went
+    on to change its mind about, and the final answer is the last one.
+
+    This never repairs the JSON, and it never guesses at evidence. A salvaged
+    code carries no span, because the quote is exactly the field that could not
+    be read, and inventing an offset would score as a near miss rather than as
+    the loss it is. Runs report how many notes were salvaged so that the
+    evidence coverage they cost is visible instead of just lower.
+    """
+    marker = response.rfind('"codes"')
+    if marker == -1:
+        return {}
+
+    codes: dict[str, None] = {}
+    for raw in _CODE_FIELD.findall(response[marker:]):
+        code = normalise_code(raw, restrict_to)
+        if not code:
+            continue
+        if restrict_to is not None and code not in restrict_to:
+            continue
+        codes[code] = None
+    return codes
 
 
 def normalise_code(code: str, offered: set[str] | None) -> str:
