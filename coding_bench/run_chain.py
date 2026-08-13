@@ -102,7 +102,12 @@ def _evaluate_inline(config: dict) -> dict:
     """
     from pathlib import Path as _Path
 
-    from coding_bench.eval_remote import ADAPTER_FILES, EXTERNAL_PROVIDERS, build_predictor
+    from coding_bench.eval_remote import (
+        ADAPTER_FILES,
+        EXTERNAL_PROVIDERS,
+        SINGLE_THREADED_APPROACHES,
+        build_predictor,
+    )
     from coding_bench.bench import loaders, runner
 
     task = config["task"]
@@ -148,7 +153,7 @@ def _evaluate_inline(config: dict) -> dict:
         adapter_path=adapter_path,
         prompt_text=prompt_text,
         external_provider=provider,
-        concurrency=1 if config["approach"] in ("retrieval", "retr_llm") else config.get("concurrency", 1),
+        concurrency=1 if config["approach"] in SINGLE_THREADED_APPROACHES else config.get("concurrency", 1),
         cache=config["cache"],
         git_sha=config.get("git_sha"),
         recompute_empty=config.get("recompute_empty", False),

@@ -15,7 +15,11 @@ dependencies = [
 [project.optional-dependencies]
 # Approaches and adapters are opt in, so public CI installs almost nothing.
 retrieval = ["sentence-transformers>=3.0.0"]
+# entity_match also needs en_core_sci_lg, which is not on PyPI. See the install
+# line at the top of approaches/entity_match.py.
+entity = ["sentence-transformers>=3.0.0", "scispacy>=0.5.4", "spacy>=3.7"]
 groq = ["groq>=0.11.0"]
+anthropic = ["anthropic>=0.116.0"]
 modal = ["modal>=1.0.0"]
 dev = ["pytest>=8.0.0"]
 

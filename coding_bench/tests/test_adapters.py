@@ -13,6 +13,7 @@ Both are easy to break by hand and neither was checked by anything.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -232,3 +233,67 @@ def test_the_client_reads_the_answer_out_of_the_reasoning_channel():
     )
     result = client.complete("system", "user", max_tokens=16384)
     assert "99213" in result.text
+
+
+# --------------------------------------------------------------------------
+# Anthropic: a different wire format for the same two questions
+
+
+def test_anthropic_truncation_is_max_tokens_not_length():
+    """The Groq check copied verbatim would never fire here.
+
+    OpenAI compatible endpoints report a cut off generation as
+    `finish_reason: "length"`; the Anthropic API reports
+    `stop_reason: "max_tokens"`. An adapter that checked for "length" would
+    return a truncated answer as an ordinary completion, which scores as the
+    model finding nothing. This pins the constant so the two cannot drift.
+    """
+    from coding_bench.adapters import api_anthropic
+
+    source = Path(api_anthropic.__file__).read_text(encoding="utf8")
+    assert 'stop_reason == "max_tokens"' in source
+    assert 'stop_reason == "refusal"' in source
+    assert '"length"' not in source.split('"""', 2)[2], "no OpenAI stop reason in the code"
+
+
+def test_anthropic_reads_text_blocks_and_falls_back_to_thinking():
+    """The same rule as answer_text, expressed for a list of typed blocks."""
+    from coding_bench.adapters.api_anthropic import answer_from_blocks
+
+    class Block:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+    answered = [
+        Block(type="thinking", thinking="deliberating"),
+        Block(type="text", text='{"codes": []}'),
+    ]
+    assert answer_from_blocks(answered) == '{"codes": []}'
+
+    # Text blocks are concatenated, not just the first one taken.
+    assert answer_from_blocks([Block(type="text", text="a"), Block(type="text", text="b")]) == "ab"
+
+    # Nothing in the answer channel: read the reasoning rather than discard it.
+    thinking_only = [Block(type="thinking", thinking='{"codes": [{"code": "I10"}]}')]
+    assert "I10" in answer_from_blocks(thinking_only)
+
+    assert answer_from_blocks([Block(type="text", text="  ")]) == ""
+    assert answer_from_blocks([]) == ""
+
+
+def test_anthropic_is_recorded_as_a_second_external_provider():
+    """A run has to say which provider saw the restricted note text."""
+    assert EXTERNAL_PROVIDERS["sonnet-5"] == "anthropic"
+    assert ADAPTER_FILES["sonnet-5"] == "api_anthropic.py"
+    assert "sonnet-5" not in LOCAL_MODELS
+
+
+def test_candidate_caching_approaches_are_pinned_to_one_thread():
+    """These cache encoded candidates on the instance; sharing corrupts it.
+
+    The failure mode is a wrong answer rather than an exception, so the guard is
+    asserted rather than left to whoever adds the next approach.
+    """
+    from coding_bench.eval_remote import SINGLE_THREADED_APPROACHES
+
+    assert {"retrieval", "retr_llm", "embed_match", "entity_match"} <= SINGLE_THREADED_APPROACHES

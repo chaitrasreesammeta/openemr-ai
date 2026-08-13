@@ -35,6 +35,7 @@ image = (
         "pyarrow>=15.0.0",
         "numpy>=1.26",
         "groq>=0.11.0",
+        "anthropic>=0.116.0",
         "modal>=1.0.0",
         "sentence-transformers>=3.0.0",
     )
@@ -61,6 +62,9 @@ image = (
 EXTERNAL_PROVIDERS = {
     "qwen3.6-27b": "groq",
     "gpt-oss-120b": "groq",
+    # A second provider, and a second clearance question. See the governance
+    # note at the top of adapters/api_anthropic.py before running this one.
+    "sonnet-5": "anthropic",
 }
 
 # Which adapter file backs each model. Its hash goes into the run manifest and
@@ -72,6 +76,7 @@ ADAPTER_FILES = {
     "muse-glimmer-30b-gguf": "modal_muse_gguf.py",
     "muse-glimmer-30b": "modal_muse.py",
     "gemma4-26b-a4b-gguf": "modal_gemma4_gguf.py",
+    "sonnet-5": "api_anthropic.py",
 }
 
 # Everything with an adapter that is not reached over someone else's API, which
@@ -79,6 +84,12 @@ ADAPTER_FILES = {
 # listed again, so a model can never appear in one list and be forgotten in the
 # other.
 LOCAL_MODELS = set(ADAPTER_FILES) - set(EXTERNAL_PROVIDERS)
+
+# Approaches that cache encoded candidates on the instance and are therefore not
+# safe to share across threads. Named in one place rather than repeated at each
+# call site, because the failure mode of forgetting one is a corrupted cache
+# rather than an exception.
+SINGLE_THREADED_APPROACHES = {"retrieval", "retr_llm", "embed_match", "entity_match"}
 
 
 def local_git_state() -> tuple[str, bool]:
@@ -113,6 +124,7 @@ def build_predictor(
     reasoning_strength: str = "medium",
 ):
     """Assemble an approach from its parts."""
+    from coding_bench.adapters.api_anthropic import MODELS as ANTHROPIC_MODELS
     from coding_bench.adapters.api_groq import MODELS as GROQ_MODELS, GroqClient
     from coding_bench.approaches.llm import LLMPredictor
     from coding_bench.approaches.retrieval import RetrievalPredictor
@@ -120,9 +132,26 @@ def build_predictor(
 
     if approach == "retrieval":
         return RetrievalPredictor(top_k=10)
+    if approach == "embed_match":
+        from coding_bench.approaches.embed_match import EmbedMatchPredictor
+
+        return EmbedMatchPredictor()
+    if approach == "entity_match":
+        from coding_bench.approaches.entity_match import EntityMatchPredictor
+
+        return EntityMatchPredictor()
 
     if model in GROQ_MODELS:
         client = GroqClient(model_id=GROQ_MODELS[model])
+    elif model in ANTHROPIC_MODELS:
+        from coding_bench.adapters.api_anthropic import AnthropicClient
+
+        # No temperature: Claude Sonnet 5 rejects one. Reasoning strength is
+        # passed through because it maps onto Anthropic's effort, so the run
+        # parameter keeps steering what it claims to steer.
+        client = AnthropicClient(
+            model_id=ANTHROPIC_MODELS[model], reasoning_strength=reasoning_strength
+        )
     elif model == "muse-glimmer-30b-gguf":
         from coding_bench.adapters.modal_muse_gguf import MuseGGUFClient
 
@@ -146,7 +175,7 @@ def build_predictor(
     else:
         raise ValueError(
             f"Unknown model {model!r}. Known: "
-            f"{sorted(GROQ_MODELS) + sorted(LOCAL_MODELS)}"
+            f"{sorted(GROQ_MODELS) + sorted(ANTHROPIC_MODELS) + sorted(LOCAL_MODELS)}"
         )
 
     llm = LLMPredictor(client=client, code_system=code_system, max_tokens=max_tokens)
@@ -160,7 +189,14 @@ def build_predictor(
 @app.function(
     image=image,
     volumes={GOLD_MOUNT: gold_volume},
-    secrets=[modal.Secret.from_name("groq-api")],
+    # Both provider secrets. Modal resolves every secret in an app at startup,
+    # so `anthropic-api` must exist before this is deployed or every run breaks,
+    # including the ones that never touch Anthropic:
+    #     modal secret create anthropic-api ANTHROPIC_API_KEY=<key>
+    secrets=[
+        modal.Secret.from_name("groq-api"),
+        modal.Secret.from_name("anthropic-api"),
+    ],
     timeout=14400,
     memory=8192,
     cpu=4.0,
@@ -222,7 +258,7 @@ def evaluate(
         external_provider=provider,
         # The retriever caches encoded candidates on the instance, so it is not
         # safe to share across threads.
-        concurrency=1 if approach in ("retrieval", "retr_llm") else concurrency,
+        concurrency=1 if approach in SINGLE_THREADED_APPROACHES else concurrency,
         cache=cache,
         git_sha=git_sha,
         recompute_empty=recompute_empty,

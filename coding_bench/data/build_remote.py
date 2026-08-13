@@ -16,32 +16,22 @@ because it has to hold a PhysioNet login. A separate `aws` secret would be
 tidier and would break every run that had not created it, since Modal resolves
 every secret in an app at startup.
 
-`PHYSIONET_USER` and `PHYSIONET_PASS` are needed only by the `parallel` and
-`wget` routes, which download over HTTP from PhysioNet directly. The S3 route
-returns before the code ever asks for them. Add them to the same secret if you
-want those fallbacks to work:
-
-    modal secret create physionet \
-        AWS_ACCESS_KEY_ID=<key> AWS_SECRET_ACCESS_KEY=<secret> \
-        PHYSIONET_USER=<user> PHYSIONET_PASS=<pass>
-
-Then:
+There is no PhysioNet username or password anywhere in this file. There used to
+be two more download routes, aria2c and wget, both pulling over HTTP with the
+account password. Both were slow enough never to be chosen, and removing them
+removes the reason to keep that password in a Modal secret at all.
 
     modal run coding_bench/data/build_remote.py                 # build and write Tier 1 locally
-    modal run coding_bench/data/build_remote.py --source s3     # force a specific download route
+    modal run coding_bench/data/build_remote.py --force-download  # ignore the cached NOTEEVENTS
     modal run coding_bench/data/build_remote.py --verify-only   # check the volume against the repo
     modal run coding_bench/data/build_remote.py::inspect        # what is on the volumes
 
-Download routes, in the order `auto` picks them: `s3` (fastest, AWS keys only),
-`parallel` (aria2c, 16 connections, PhysioNet login), `wget` (one connection,
-PhysioNet login, slow enough to be a last resort). The download is cached on the
-raw volume, so this cost is paid once.
+The download is cached on the raw volume, so it is paid for once.
 
-Whichever route is used, the account behind it must be credentialed for "MIMIC-III
-Clinical Database" v1.4 specifically: for S3 that means an AWS account PhysioNet
-has linked to a credentialed profile, and for the other two the PhysioNet login
-itself. MDACE offsets index NOTEEVENTS.csv ROW_ID, so MIMIC-IV-Note cannot
-substitute for it.
+The AWS account must be one PhysioNet has linked to a profile credentialed for
+"MIMIC-III Clinical Database" v1.4 specifically, which is what enabling cloud
+access on the project page does. MDACE offsets index NOTEEVENTS.csv ROW_ID, so
+MIMIC-IV-Note cannot substitute for it.
 """
 
 from __future__ import annotations
@@ -53,9 +43,6 @@ import time
 from pathlib import Path
 
 import modal
-
-NOTEEVENTS_URL = "https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz"
-SHASUMS_URL = "https://physionet.org/files/mimiciii/1.4/SHA256SUMS.txt"
 
 # PhysioNet mirrors MIMIC-III into S3, which is far faster than the web server,
 # because that throttles a single connection to a crawl. It needs an AWS account
@@ -72,8 +59,6 @@ S3_URI = (
     "/mimiciii/1.4/NOTEEVENTS.csv.gz"
 )
 S3_REGION = "us-east-1"
-
-DOWNLOAD_SOURCES = ("s3", "parallel", "wget")
 
 GOLD_VOLUME = "coding-benchmark-gold"
 RAW_VOLUME = "coding-benchmark-raw"
@@ -92,7 +77,7 @@ raw_volume = modal.Volume.from_name(RAW_VOLUME, create_if_missing=True)
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .apt_install("git", "wget", "aria2")
+    .apt_install("git")
     .pip_install("pyarrow>=15.0.0", "awscli>=1.32.0")
     .add_local_file(LOCAL_DATA_DIR / "build.py", "/root/build.py")
 )
@@ -105,13 +90,6 @@ def _load_builder():
 
     return build
 
-
-def _credentials() -> tuple[str, str]:
-    user = os.environ.get("PHYSIONET_USER")
-    password = os.environ.get("PHYSIONET_PASS")
-    if not user or not password:
-        raise RuntimeError("The physionet secret must define PHYSIONET_USER and PHYSIONET_PASS")
-    return user, password
 
 
 def _run_streaming(command: list[str], what: str) -> None:
@@ -141,28 +119,29 @@ def _run_streaming(command: list[str], what: str) -> None:
 
 
 def remote_size() -> int | None:
-    """Ask PhysioNet how big NOTEEVENTS is, without downloading it."""
-    import base64
-    import urllib.error
-    import urllib.request
+    """Ask S3 how big NOTEEVENTS is, without downloading it.
 
-    try:
-        user, password = _credentials()
-    except RuntimeError:
+    A HEAD against the access point, using the same credentials as the download
+    itself, so there is no second account to keep credentialed and no second way
+    for the check to be skipped.
+    """
+    import json as _json
+    import subprocess
+
+    bucket, _, key = S3_URI[len("s3://"):].partition("/")
+    result = subprocess.run(
+        ["aws", "s3api", "head-object", "--bucket", bucket, "--key", key,
+         "--region", S3_REGION],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        # Report the uncertainty rather than guess. The caller says so out loud.
+        print(f"Could not read the remote size: {result.stderr.strip()[:200]}", flush=True)
         return None
-
-    request = urllib.request.Request(NOTEEVENTS_URL, method="HEAD")
-    token = base64.b64encode(f"{user}:{password}".encode()).decode()
-    request.add_header("Authorization", f"Basic {token}")
-    # PhysioNet answers 403 to unrecognised clients, urllib included, the same
-    # way it refuses aria2. Without this the size check silently degrades to
-    # "unverified" and a truncated cache would be trusted.
-    request.add_header("User-Agent", "Wget/1.21.3")
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            length = response.headers.get("Content-Length")
-            return int(length) if length else None
-    except (urllib.error.URLError, ValueError) as exc:
+        return int(_json.loads(result.stdout)["ContentLength"])
+    except (ValueError, KeyError) as exc:
         print(f"Could not read the remote size ({exc})", flush=True)
         return None
 
@@ -173,17 +152,9 @@ def _cached_and_complete() -> tuple[int, bool] | None:
     Existence is not completeness. A download interrupted partway leaves a file
     that looks cached and would then be joined against as though it were the
     dataset, quietly producing a gold set missing whatever came after the cut.
-    Comparing against the server's Content-Length costs one HEAD request.
+    Comparing against the object's ContentLength costs one HEAD request.
     """
     if not NOTEEVENTS_PATH.exists():
-        return None
-
-    # aria2 preallocates the target at its full length before fetching a byte,
-    # so size alone would call a 1 percent download complete. It removes this
-    # control file only on success, which makes it the authoritative signal.
-    control = NOTEEVENTS_PATH.parent / f"{NOTEEVENTS_PATH.name}.aria2"
-    if control.exists():
-        print("An aria2 control file is present, so the download is unfinished", flush=True)
         return None
 
     local = NOTEEVENTS_PATH.stat().st_size
@@ -195,7 +166,7 @@ def _cached_and_complete() -> tuple[int, bool] | None:
         return local, False
     if local != expected:
         print(
-            f"Cached file is {local / 1e6:.0f} MB but the server reports "
+            f"Cached file is {local / 1e6:.0f} MB but S3 reports "
             f"{expected / 1e6:.0f} MB, so it is incomplete. Re-fetching.",
             flush=True,
         )
@@ -214,100 +185,35 @@ def _check_is_gzip(path: Path) -> None:
             )
 
 
-def _download_noteevents(source: str) -> str:
-    """Fetch NOTEEVENTS by the fastest route available, returning which was used.
+def _download_noteevents() -> str:
+    """Fetch NOTEEVENTS from the S3 access point, returning the route used.
 
-    PhysioNet's web server throttles a single HTTP connection to a crawl, so
-    plain wget can take hours for this file. In preference order:
+    S3 is the only route. There were two others, aria2c with 16 connections and
+    a plain wget, both pulling from PhysioNet over HTTP with the account
+    password. They are gone. PhysioNet throttles a single connection hard enough
+    that wget measured in hours for this file, aria2 needed a fake user agent to
+    get past a 403 and a control file to tell a resumed download from a finished
+    one, and neither was ever the route anyone actually used. Removing them also
+    removes the reason to keep a PhysioNet password in a Modal secret at all.
 
-      s3        the PhysioNet mirror in a requester pays bucket, fastest, but
-                needs AWS keys on an account PhysioNet has linked to yours
-      parallel  aria2c with 16 connections against the same PhysioNet URL,
-                no extra credentials, usually many times faster than wget
-      wget      one connection, the slow path, kept only as a last resort
+    The return value is kept so the run record can say how the data arrived,
+    even though there is currently only one answer.
     """
-    have_aws = bool(os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_SECRET_ACCESS_KEY"))
-
-    if source == "auto":
-        # Try fastest first and fall back, because a route can fail for reasons
-        # that have nothing to do with the credentials being wrong. An explicit
-        # --source never falls back, so a deliberate choice fails visibly.
-        chain = (["s3"] if have_aws else []) + ["parallel", "wget"]
-        last_error: Exception | None = None
-        for candidate in chain:
-            try:
-                return _download_noteevents(candidate)
-            except RuntimeError as exc:
-                last_error = exc
-                print(f"Route {candidate!r} failed, trying the next one:\n{exc}", flush=True)
-        raise RuntimeError(f"Every download route failed. Last error: {last_error}")
-
-    if source == "s3":
-        if not have_aws:
-            raise RuntimeError(
-                "Source 's3' needs AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY. Add them "
-                "to the existing physionet secret (Modal resolves every secret in the app "
-                "at startup, so a separate optional secret would break runs that lack it), "
-                "using an AWS account that PhysioNet has linked to your credentialed profile."
-            )
-        print(f"Downloading {S3_URI} (requester pays)", flush=True)
-        _run_streaming(
-            [
-                "aws", "s3", "cp", S3_URI, str(NOTEEVENTS_PATH),
-                "--region", S3_REGION,
-            ],
-            "S3 download",
+    if not (os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_SECRET_ACCESS_KEY")):
+        raise RuntimeError(
+            "The S3 route needs AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY on the "
+            "physionet secret, using an AWS account that PhysioNet has linked to a "
+            "credentialed profile. Enable cloud access on the MIMIC-III v1.4 project "
+            "page to have your principal granted on the access point."
         )
-        _check_is_gzip(NOTEEVENTS_PATH)
-        # A control file left behind by an abandoned aria2 attempt would make
-        # this finished download look unfinished on the next run.
-        (NOTEEVENTS_PATH.parent / f"{NOTEEVENTS_PATH.name}.aria2").unlink(missing_ok=True)
-        return "s3"
 
-    user, password = _credentials()
-
-    if source == "parallel":
-        print(f"Downloading {NOTEEVENTS_URL} with 16 connections", flush=True)
-        _run_streaming(
-            [
-                "aria2c", NOTEEVENTS_URL,
-                "--http-user", user, "--http-passwd", password,
-                # PhysioNet answers 403 to aria2's own user agent even with
-                # valid credentials. They document wget and the AWS CLI as the
-                # supported clients, so present as wget.
-                "--user-agent", "Wget/1.21.3",
-                "-x", "16", "-s", "16", "-k", "10M",
-                "--max-tries=5", "--retry-wait=5",
-                "--summary-interval=15", "--console-log-level=warn",
-                # Resume rather than restart. An interrupted download of this
-                # file is expensive to repeat, and aria2c keeps a .aria2 control
-                # file next to the target so a rerun picks up where it stopped.
-                "--continue=true", "--auto-file-renaming=false",
-                # No preallocation. It buys nothing on a network volume and it
-                # makes a partial file indistinguishable from a finished one by
-                # size, which is a trap for every later integrity check.
-                "--file-allocation=none",
-                "-d", str(NOTEEVENTS_PATH.parent), "-o", NOTEEVENTS_PATH.name,
-            ],
-            "Parallel download",
-        )
-        _check_is_gzip(NOTEEVENTS_PATH)
-        return "parallel"
-
-    print(f"Downloading {NOTEEVENTS_URL} on one connection", flush=True)
-    # -c with -P rather than -O, because wget cannot resume into -O and the
-    # URL basename is already the filename we want. A dot line per 32 MiB is
-    # enough to see that it is moving without flooding the log.
+    print(f"Downloading {S3_URI}", flush=True)
     _run_streaming(
-        [
-            "wget", "--continue", "--progress=dot:giga",
-            "--user", user, "--password", password,
-            "-P", str(NOTEEVENTS_PATH.parent), NOTEEVENTS_URL,
-        ],
-        "PhysioNet download",
+        ["aws", "s3", "cp", S3_URI, str(NOTEEVENTS_PATH), "--region", S3_REGION],
+        "S3 download",
     )
     _check_is_gzip(NOTEEVENTS_PATH)
-    return "wget"
+    return "s3"
 
 
 @app.function(
@@ -319,7 +225,7 @@ def _download_noteevents(source: str) -> str:
     # well over an hour. The S3 mirror is minutes, which is the real fix.
     timeout=10800,
 )
-def fetch_sources(force: bool = False, source: str = "auto") -> dict:
+def fetch_sources(force: bool = False) -> dict:
     """Put NOTEEVENTS and a pinned MDACE checkout on the raw volume."""
     import subprocess
 
@@ -332,11 +238,11 @@ def fetch_sources(force: bool = False, source: str = "auto") -> dict:
         cached_size, verified = cached
         report["noteevents"] = (
             f"cached, {cached_size / 1e6:.0f} MB, "
-            + ("size matches the server" if verified else "size NOT verified against the server")
+            + ("size matches S3" if verified else "size NOT verified against S3")
         )
     else:
         started = time.perf_counter()
-        used = _download_noteevents(source)
+        used = _download_noteevents()
         size_mb = NOTEEVENTS_PATH.stat().st_size / 1e6
         elapsed = time.perf_counter() - started
         report["noteevents"] = (
@@ -453,11 +359,9 @@ def inspect() -> dict:
 
 
 @app.local_entrypoint()
-def main(verify_only: bool = False, force_download: bool = False, source: str = "auto"):
+def main(verify_only: bool = False, force_download: bool = False):
     """Fetch, build, and land the Tier 1 artifacts in the repo."""
-    if source not in ("auto",) + DOWNLOAD_SOURCES:
-        raise SystemExit(f"--source must be auto or one of {DOWNLOAD_SOURCES}")
-    print(json.dumps(fetch_sources.remote(force=force_download, source=source), indent=2))
+    print(json.dumps(fetch_sources.remote(force=force_download), indent=2))
 
     manifest_dir = LOCAL_DATA_DIR / "manifests"
     committed = {
