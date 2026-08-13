@@ -269,7 +269,13 @@ class MuseGlimmerGGUF:
         choice = payload["choices"][0]
         usage = payload.get("usage", {})
         return {
-            "text": choice["message"].get("content") or "",
+            # Every channel the server produced. Reading only `content` here is
+            # what lost 120 of 150 notes on the CPT run: llama.cpp under --jinja
+            # routes thinking to `reasoning_content`, and a model that never
+            # leaves that channel looked exactly like a model with nothing to
+            # say. The choice is made client side by answer_text, because this
+            # container cannot import coding_bench.
+            "message": choice["message"],
             "stop_reason": choice.get("finish_reason") or "unknown",
             "latency_s": elapsed,
             "usage": {
@@ -296,7 +302,7 @@ class MuseGGUFClient:
         self._remote = modal.Cls.from_name(app_name, "MuseGlimmerGGUF")()
 
     def complete(self, system: str, user: str, max_tokens: int):
-        from coding_bench.approaches.base import Completion, Truncated
+        from coding_bench.approaches.base import Completion, Truncated, answer_text
 
         result = self._remote.complete.remote(
             system=system,
@@ -310,7 +316,7 @@ class MuseGGUFClient:
                 self.model_id, "length", produced_tokens=result["usage"]["completion_tokens"]
             )
         return Completion(
-            text=result["text"],
+            text=answer_text(result["message"]),
             stop_reason=result["stop_reason"],
             latency_s=result["latency_s"],
             usage=result["usage"],

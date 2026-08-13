@@ -42,11 +42,15 @@ image = (
     .add_local_dir(
         PACKAGE_DIR,
         remote_path="/root/coding_bench",
+        # The run records are deliberately NOT excluded. They are the cache
+        # seed: every past prediction, keyed by everything the cache key needs,
+        # already paid for. Leaving them out made `seed_from_records` dead code
+        # inside Modal, so a container could only reuse work through the live
+        # Dict and a fresh workspace started from nothing. They are 3MB.
         ignore=modal.FilePatternMatcher(
             "**/gold/**",
             "**/*.parquet",
             "**/__pycache__/**",
-            "**/results/**",
         ),
     )
 )

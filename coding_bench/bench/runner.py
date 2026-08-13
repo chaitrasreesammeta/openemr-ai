@@ -402,6 +402,11 @@ def run(
     report = m.evaluate(results)
     report["operational"]["error_rate"] = sum(bool(r["error"]) for r in records) / max(len(records), 1)
     report["operational"]["cache_hits"] = sum(bool(r.get("cached")) for r in records)
+    # How many of those hits were answered by a different revision of the
+    # adapter under a declared equivalence. Zero for an ordinary run. Non zero
+    # means part of this record was produced by code that is not the code the
+    # manifest names, which a reader is entitled to know without diffing hashes.
+    report["operational"]["cache_carried_forward"] = getattr(store, "carried", 0)
 
     return {"manifest": asdict(manifest), "metrics": report, "predictions": records}
 

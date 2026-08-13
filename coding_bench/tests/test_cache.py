@@ -136,3 +136,111 @@ def test_null_cache_reports_nothing_stored():
     store = cache_module.NullCache()
     store.put("k", {"codes": {}})
     assert store.get("k") is None
+
+
+# --------------------------------------------------------------------------
+# Adapter equivalences
+
+
+def seed_record(tmp_path, adapter: str, rows: list[dict]) -> dict:
+    """One run record on disk, and the seed rebuilt from it."""
+    import json
+
+    record = {
+        "manifest": {
+            "run_id": "r",
+            "task": "cpt",
+            "model_id": "model-a",
+            "approach": "llm",
+            "approach_version": "v1",
+            "candidate_space": "gold",
+            "dataset_manifest_sha256": "dataset-a",
+            "adapter_sha256": adapter,
+            "prompt_sha256": "prompt-a",
+            "parameters": {"max_tokens": 4096, "concurrency": 4},
+        },
+        "predictions": rows,
+    }
+    (tmp_path / "run.json").write_text(json.dumps(record), encoding="utf8")
+    return cache_module.seed_from_records(tmp_path, manifest_lookup=lambda m, row: {"A", "B"})
+
+
+def key_for(adapter: str, note_id: str) -> str:
+    return cache_module.cache_key(**(BASE | {"adapter_sha256": adapter, "note_id": note_id}))
+
+
+def test_an_equivalence_carries_an_answered_note_onto_the_new_adapter(monkeypatch, tmp_path):
+    """The point of the whole mechanism: do not pay twice for an unchanged answer."""
+    monkeypatch.setattr(
+        cache_module,
+        "ADAPTER_EQUIVALENCES",
+        (cache_module.AdapterEquivalence(before="old", after="new", why="test"),),
+    )
+    seed = seed_record(tmp_path, "old", [
+        {"note_id": "1", "pred": ["A"], "pred_spans": {}, "n_candidates": 2, "usage": {}},
+    ])
+    assert key_for("old", "1") in seed
+    carried = seed[key_for("new", "1")]
+    assert carried["codes"] == {"A": None}
+    assert carried["carried_from"] == "old", "a borrowed answer has to say so"
+
+
+@pytest.mark.parametrize(
+    "row, why",
+    [
+        ({"note_id": "1", "pred": [], "n_candidates": 2}, "silent notes are what the fix was for"),
+        ({"note_id": "1", "pred": ["A"], "truncated": True, "n_candidates": 2}, "truncated"),
+    ],
+)
+def test_an_equivalence_refuses_to_carry_a_failed_note(monkeypatch, tmp_path, row, why):
+    monkeypatch.setattr(
+        cache_module,
+        "ADAPTER_EQUIVALENCES",
+        (cache_module.AdapterEquivalence(before="old", after="new", why="test"),),
+    )
+    seed = seed_record(tmp_path, "old", [row])
+    assert key_for("new", "1") not in seed, why
+
+
+def test_an_equivalence_only_applies_to_the_adapter_it_names(monkeypatch, tmp_path):
+    """Otherwise one declaration would quietly excuse every adapter in the repo."""
+    monkeypatch.setattr(
+        cache_module,
+        "ADAPTER_EQUIVALENCES",
+        (cache_module.AdapterEquivalence(before="old", after="new", why="test"),),
+    )
+    seed = seed_record(tmp_path, "unrelated", [
+        {"note_id": "1", "pred": ["A"], "pred_spans": {}, "n_candidates": 2, "usage": {}},
+    ])
+    assert key_for("new", "1") not in seed
+    assert key_for("unrelated", "1") in seed
+
+
+def test_carried_hits_are_counted_separately_from_ordinary_ones():
+    seed = {
+        "borrowed": {"codes": {"A": None}, "carried_from": "old"},
+        "ours": {"codes": {"B": None}},
+    }
+    store = cache_module.RecordSeededCache(seed, cache_module.MemoryCache())
+    store.get("borrowed")
+    store.get("ours")
+    store.get("absent")
+    assert (store.hits, store.misses, store.carried) == (2, 1, 1)
+
+
+def test_the_declared_equivalences_name_the_adapters_that_are_actually_here():
+    """A stale `after` hash is the failure mode this table has.
+
+    `before` may name an adapter that was never pushed, which is the situation
+    it exists for. `after` must be a file in this checkout, because the whole
+    guarantee is that these bytes are the ones that will run.
+    """
+    from pathlib import Path
+    import hashlib
+
+    here = {
+        hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in (Path(cache_module.__file__).parent.parent / "adapters").glob("*.py")
+    }
+    for rule in cache_module.ADAPTER_EQUIVALENCES:
+        assert rule.after in here, f"{rule.why}: `after` names no adapter in this checkout"

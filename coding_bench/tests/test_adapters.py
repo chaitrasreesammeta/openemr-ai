@@ -16,7 +16,7 @@ import json
 
 import pytest
 
-from coding_bench.approaches.base import Completion, Truncated
+from coding_bench.approaches.base import Completion, Truncated, answer_text
 
 modal = pytest.importorskip("modal", reason="adapters are an optional install")
 
@@ -106,7 +106,7 @@ def build_client(**response) -> tuple[gemma4.Gemma4GGUFClient, StubRemote]:
 
 def test_a_finished_generation_comes_back_as_a_completion():
     client, _ = build_client(
-        text='{"codes": [{"code": "99213", "quote": "office visit"}]}',
+        message={"content": '{"codes": [{"code": "99213", "quote": "office visit"}]}'},
         stop_reason="stop",
         latency_s=12.5,
         usage={"prompt_tokens": 4000, "completion_tokens": 40},
@@ -126,7 +126,7 @@ def test_a_cut_off_generation_raises_rather_than_returning_a_partial_answer():
     runs would never have been visible at all.
     """
     client, _ = build_client(
-        text='{"codes": [{"code": "99213", "quo',
+        message={"content": '{"codes": [{"code": "99213", "quo'},
         stop_reason="length",
         latency_s=300.0,
         usage={"prompt_tokens": 4000, "completion_tokens": 32768},
@@ -145,7 +145,7 @@ def test_an_empty_answer_is_passed_through_as_an_answer():
     Turning them into errors here would hide the thing worth investigating.
     """
     client, _ = build_client(
-        text="", stop_reason="stop", latency_s=30.0,
+        message={"content": "", "reasoning_content": ""}, stop_reason="stop", latency_s=30.0,
         usage={"prompt_tokens": 4000, "completion_tokens": 1810},
     )
     result = client.complete("system", "user", max_tokens=16384)
@@ -155,10 +155,58 @@ def test_an_empty_answer_is_passed_through_as_an_answer():
 
 def test_the_run_parameters_reach_the_server():
     client, stub = build_client(
-        text="{}", stop_reason="stop", latency_s=1.0, usage={},
+        message={"content": "{}"}, stop_reason="stop", latency_s=1.0, usage={},
     )
     client.complete("a system prompt", "a user prompt", max_tokens=32768)
     call = stub.calls[0]
     assert call["max_tokens"] == 32768
     assert call["temperature"] == 0.0, "greedy, so a rerun reproduces the run"
     assert call["reasoning_strength"] == "medium"
+
+
+# --------------------------------------------------------------------------
+# Which channel the answer is read from
+
+
+def test_content_is_returned_untouched_when_it_has_anything():
+    """The fix must be a no op for every response that already worked.
+
+    This is the property the cache carry forward rests on. If content wins
+    byte for byte, a note that produced codes cannot have changed, and paying
+    to generate it again buys nothing.
+    """
+    message = {"content": '  {"codes": []}  ', "reasoning_content": "thinking out loud"}
+    assert answer_text(message) == '  {"codes": []}  '
+
+
+def test_the_reasoning_channel_is_read_when_content_is_empty():
+    """Otherwise a model that never stopped thinking scores as finding nothing."""
+    message = {"content": "", "reasoning_content": 'I will answer {"codes": []}'}
+    assert answer_text(message) == 'I will answer {"codes": []}'
+
+
+def test_whitespace_only_content_does_not_count_as_an_answer():
+    message = {"content": "\n \n", "reasoning_content": "the actual output"}
+    assert answer_text(message) == "the actual output"
+
+
+def test_a_genuinely_empty_response_stays_empty():
+    """No channel had anything, so there is nothing to recover and no pretending."""
+    assert answer_text({"content": "", "reasoning_content": ""}) == ""
+    assert answer_text({"role": "assistant"}) == ""
+
+
+def test_the_client_reads_the_answer_out_of_the_reasoning_channel():
+    """The end to end shape of the bug, through the adapter that had it."""
+    client, _ = build_client(
+        message={
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": '{"codes": [{"code": "99213", "quote": "office visit"}]}',
+        },
+        stop_reason="stop",
+        latency_s=30.0,
+        usage={"prompt_tokens": 4000, "completion_tokens": 1810},
+    )
+    result = client.complete("system", "user", max_tokens=16384)
+    assert "99213" in result.text

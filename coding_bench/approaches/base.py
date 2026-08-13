@@ -77,6 +77,44 @@ class Completion:
     usage: dict[str, int] = field(default_factory=dict)
 
 
+# Where a provider may put generated text when it is not in `content`. Ordered,
+# so the first one present wins.
+REASONING_CHANNELS = ("reasoning_content", "reasoning")
+
+
+def answer_text(message: dict) -> str:
+    """The generated text, wherever the provider decided to put it.
+
+    OpenAI compatible servers split a reasoning model's output into channels:
+    `content` carries the final answer and something like `reasoning_content`
+    carries the thinking. A model that never leaves the thinking channel returns
+    an empty `content` while having generated a page, and an adapter that reads
+    only `content` records that as the model having nothing to say.
+
+    That is not hypothetical, and it is not cheap. It cost 124 of 312 notes on
+    Gemma 4 and 120 of 150 on Muse, every one of them scored as an empty
+    prediction. See the note at the top of adapters/modal_gemma4_gguf.py.
+
+    `content` wins whenever it holds anything, and is returned unchanged, so a
+    response that answered normally is byte for byte what it was before. The
+    fallback only fires where the alternative is discarding the response
+    entirely, which is why it can be reasoned about one note at a time.
+
+    Reading the thinking is not as good as reading an answer. The parser already
+    expects to find the answer inside a reasoning trace, since extract_json
+    takes the last object carrying codes rather than the first, but a model cut
+    off mid thought has no answer anywhere and stays a truncation.
+    """
+    content = message.get("content") or ""
+    if content.strip():
+        return content
+    for channel in REASONING_CHANNELS:
+        value = message.get(channel) or ""
+        if value.strip():
+            return value
+    return ""
+
+
 @runtime_checkable
 class LLMClient(Protocol):
     """A model, wherever it is hosted.

@@ -54,17 +54,20 @@ That accounts for both numbers at once. The notes that truncated are the ones
 that ran the budget out mid thought, and the 124 silent notes are the ones where
 generation ended without the model ever leaving the reasoning channel.
 
-It is not specific to Gemma. `modal_muse.py` and `modal_muse_gguf.py` read
-`content` the same way, the Muse GGUF CPT run is silent on 120 of 150 notes, and
-83 notes are silent for both models. The Groq models answered those same notes
-at 0.92 micro F1 with no failures, because their adapter is a different code
-path. What Muse and Gemma share is this one, and `scripts/muse_cpt_probe.py` was
-written to find exactly this.
+It was not specific to Gemma. `modal_muse_gguf.py` read `content` the same way,
+its CPT run is silent on 120 of 150 notes, and 83 notes are silent for both
+models. The Groq models answered those same notes at 0.92 micro F1 with no
+failures, because their adapter is a different code path. What Muse and Gemma
+shared is this one.
 
-Nothing here is fixed yet, deliberately. Reading `reasoning_content` as a
-fallback is a small change, but it changes what every affected run measures, so
-it wants its own commit and a rerun rather than being folded into a
-reconstruction of the runs that exposed it.
+Both adapters now return every channel the server produced and let
+`approaches/base.py::answer_text` choose, which prefers `content` and falls back
+to the reasoning channel only when `content` is empty. The two banked runs above
+predate that fix and are kept as the record of what it cost.
+
+What the fix does not do is stop a model thinking past its budget. The notes
+that truncated have no answer in any channel, so they truncate again, and the
+truncation rate is a separate problem from the silence.
 """
 
 from __future__ import annotations
@@ -298,24 +301,20 @@ class Gemma4GGUF:
         elapsed = time.perf_counter() - started
 
         choice = payload["choices"][0]
-        message = choice["message"]
         usage = payload.get("usage", {})
         return {
-            "text": message.get("content") or "",
+            # Every channel the server produced, chosen between on the client
+            # side. Picking one here would put that decision in a container
+            # that cannot import coding_bench, so the two llama.cpp adapters
+            # would each need their own copy of the rule. See answer_text in
+            # approaches/base.py, which is the one copy.
+            "message": choice["message"],
             "stop_reason": choice.get("finish_reason") or "unknown",
             "latency_s": elapsed,
             "usage": {
                 "prompt_tokens": usage.get("prompt_tokens", 0),
                 "completion_tokens": usage.get("completion_tokens", 0),
             },
-            # Diagnostic only, and deliberately not fed to the parser. With
-            # --jinja, llama.cpp splits a reasoning model's output by channel,
-            # and anything it judges to be thinking never reaches `content`. If
-            # a response arrives with an empty `content` and a large
-            # `reasoning_chars`, the model did answer and the harness threw the
-            # answer away. See the note at the top of this file.
-            "channels": sorted(message),
-            "reasoning_chars": len(message.get("reasoning_content") or ""),
         }
 
 
@@ -335,7 +334,7 @@ class Gemma4GGUFClient:
         self._remote = modal.Cls.from_name(app_name, "Gemma4GGUF")()
 
     def complete(self, system: str, user: str, max_tokens: int):
-        from coding_bench.approaches.base import Completion, Truncated
+        from coding_bench.approaches.base import Completion, Truncated, answer_text
 
         result = self._remote.complete.remote(
             system=system,
@@ -345,13 +344,15 @@ class Gemma4GGUFClient:
             reasoning_strength=self.reasoning_strength,
         )
         # A cut off generation is a typed error, never a partial parse. This is
-        # the path that produced the 10% failure rate in both banked runs.
+        # the path that produced the 10% failure rate in both banked runs, and
+        # reading the reasoning channel does not change it: a model interrupted
+        # mid thought has no answer in any channel.
         if result["stop_reason"] == "length":
             raise Truncated(
                 self.model_id, "length", produced_tokens=result["usage"]["completion_tokens"]
             )
         return Completion(
-            text=result["text"],
+            text=answer_text(result["message"]),
             stop_reason=result["stop_reason"],
             latency_s=result["latency_s"],
             usage=result["usage"],
@@ -371,6 +372,8 @@ def smoke(prompt: str = "Count from 1 to 40, then reply with the JSON {\"ok\": t
     is the entire question. The prompt is synthetic, so nothing restricted can
     reach a log this way.
     """
+    from coding_bench.approaches.base import answer_text
+
     model = Gemma4GGUF()
     print(model.warm.remote())
 
@@ -384,10 +387,11 @@ def smoke(prompt: str = "Count from 1 to 40, then reply with the JSON {\"ok\": t
             f"latency={result['latency_s']:.1f}s tokens={produced} "
             f"rate={produced / max(result['latency_s'], 0.001):.1f} tok/s"
         )
-        text = result["text"]
-        print(f"  channels={result['channels']} content={len(text)} chars, "
-              f"reasoning={result['reasoning_chars']} chars")
-        print(f"  content opens: {text[:160]!r}\n")
+        message = result["message"]
+        sizes = {k: len(v) for k, v in message.items() if isinstance(v, str) and k != "role"}
+        text = answer_text(message)
+        print(f"  channels {sizes}, {len(text)} chars taken")
+        print(f"  opens: {text[:160]!r}\n")
 
     print("--- llama-server startup report ---")
     report = model.diagnostics.remote()

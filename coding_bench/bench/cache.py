@@ -21,15 +21,86 @@ nothing.
 **Failures are never cached.** A rate limit or a timeout is a fact about the
 afternoon, not about the model, and caching it would freeze a transient error
 into the results permanently.
+
+**Adapter equivalences** are the one exception to the adapter hash rule, and
+they are narrow on purpose. See `ADAPTER_EQUIVALENCES` below: a fix whose effect
+is understood per note lets the notes it provably cannot have changed keep their
+answers, while the notes it was written for are re-run. Anything carried across
+is marked, counted, and reported in the run record.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Protocol
+from dataclasses import dataclass
+from typing import Any, Callable, Protocol
 
 CACHE_NAME = "coding-bench-predictions"
+
+
+def answered_normally(row: dict) -> bool:
+    """The note produced codes, on its own, with nothing having gone wrong.
+
+    A row like this proves the provider returned usable text, which is the
+    precondition every equivalence below depends on.
+    """
+    return bool(row.get("pred")) and not row.get("truncated") and not row.get("error")
+
+
+@dataclass(frozen=True)
+class AdapterEquivalence:
+    """Two revisions of an adapter that answer identically, for some notes.
+
+    The adapter hash is in the cache key so that editing an adapter cannot serve
+    stale answers, and that rule is worth keeping. This is the narrow exception:
+    a change whose effect is understood well enough to say, per note, that the
+    old answer is exactly what the new code would produce.
+
+    It is deliberately awkward to declare. Both hashes are written out in full,
+    so any further edit to the adapter changes `after`, no longer matches, and
+    the exception lapses rather than silently widening. `holds_for` decides
+    which rows may cross, and everything it rejects is recomputed at full price.
+    """
+
+    before: str
+    after: str
+    why: str
+    holds_for: Callable[[dict], bool] = answered_normally
+
+
+# Reading the reasoning channel, August 2026. `answer_text` returns `content`
+# untouched whenever `content` holds anything, and only falls back when it is
+# empty. A note that came back with codes therefore had non empty content, and
+# the new code returns the same bytes to the same parser. A note that came back
+# silent or truncated is exactly what the fix was for and gets re-run.
+#
+# The `before` hashes are read from the run records rather than from git. Three
+# of these four adapter revisions were never pushed, so the record is the only
+# statement of what ran, and matching on the hash is what makes that safe: if a
+# record names some other adapter, none of this applies to it.
+ADAPTER_EQUIVALENCES: tuple[AdapterEquivalence, ...] = (
+    AdapterEquivalence(
+        before="35866a011c5cf5947a0e71c8b730edbd4050c0f5c52444222bae935d0bf1e57c",
+        after="3257b645b6f6e076ef0a3369b565a5c94af2acd7703cf5b0709f6f34aee89658",
+        why="gemma4 gguf, first run at max_tokens 16384",
+    ),
+    AdapterEquivalence(
+        before="0205a7ae239ee0ad2140578d0e289874e81ae23384594758860f6de187f12d65",
+        after="3257b645b6f6e076ef0a3369b565a5c94af2acd7703cf5b0709f6f34aee89658",
+        why="gemma4 gguf, retry at max_tokens 32768",
+    ),
+    AdapterEquivalence(
+        before="849d8996dd5ded547fd928816d81d08fa4907518ef9359078f9e46882e71a5a5",
+        after="f97b7b988a9d88bade601b690123b82141bcf837d7fce8f2badcac9b95d8239a",
+        why="muse gguf as deployed for the CPT run",
+    ),
+    AdapterEquivalence(
+        before="9073452daa3a4c318516e3c3af12ddbd6620770f5877759848627ced41b33edf",
+        after="f97b7b988a9d88bade601b690123b82141bcf837d7fce8f2badcac9b95d8239a",
+        why="muse gguf as deployed for the ICD-10 gold run",
+    ),
+)
 
 
 def cache_key(
@@ -150,11 +221,17 @@ class RecordSeededCache:
         self.hits = 0
         self.misses = 0
         self.seeded = len(seed)
+        # Hits that came from a different adapter revision under an equivalence.
+        # Counted rather than merely allowed, because a run that leans on them
+        # has to be able to say how much of itself is second hand.
+        self.carried = 0
 
     def get(self, key: str):
         value = self._seed.get(key)
         if value is not None:
             self.hits += 1
+            if "carried_from" in value:
+                self.carried += 1
             return value
         value = self._backing.get(key)
         if value is None:
@@ -202,18 +279,22 @@ def seed_from_records(runs_dir, manifest_lookup=None) -> dict[str, dict]:
             candidates = manifest_lookup(manifest, row) if manifest_lookup else None
             if candidates is None:
                 continue
-            key = cache_key(
-                dataset_manifest_sha256=manifest.get("dataset_manifest_sha256"),
-                note_id=row["note_id"],
-                model_id=manifest.get("model_id", ""),
-                approach=manifest.get("approach", ""),
-                approach_version=manifest.get("approach_version", ""),
-                adapter_sha256=manifest.get("adapter_sha256"),
-                prompt_sha256=manifest.get("prompt_sha256"),
-                candidates=candidates,
-                parameters=parameters,
-            )
-            seed[key] = {
+            recorded_adapter = manifest.get("adapter_sha256")
+
+            def key_under(adapter: str | None) -> str:
+                return cache_key(
+                    dataset_manifest_sha256=manifest.get("dataset_manifest_sha256"),
+                    note_id=row["note_id"],
+                    model_id=manifest.get("model_id", ""),
+                    approach=manifest.get("approach", ""),
+                    approach_version=manifest.get("approach_version", ""),
+                    adapter_sha256=adapter,
+                    prompt_sha256=manifest.get("prompt_sha256"),
+                    candidates=candidates,
+                    parameters=parameters,
+                )
+
+            value = {
                 "codes": {
                     code: (list(span) if span else None)
                     for code, span in (row.get("pred_spans") or {}).items()
@@ -223,6 +304,16 @@ def seed_from_records(runs_dir, manifest_lookup=None) -> dict[str, dict]:
                 "usage": row.get("usage") or {},
                 "latency_s": row.get("latency_s") or 0.0,
             }
+            seed[key_under(recorded_adapter)] = value
+
+            # And again under any adapter this one is declared equivalent to,
+            # for the rows the declaration covers. Marked, so a run built partly
+            # on another revision's answers can say so rather than presenting
+            # them as its own work.
+            for rule in ADAPTER_EQUIVALENCES:
+                if rule.before != recorded_adapter or not rule.holds_for(row):
+                    continue
+                seed[key_under(rule.after)] = dict(value, carried_from=rule.before)
     return seed
 
 
