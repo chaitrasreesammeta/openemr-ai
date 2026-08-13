@@ -192,15 +192,33 @@ def render(runs: list[dict]) -> str:
     ]
 
     if valid:
+        lines += ["## Results", ""]
+        # One table per task and candidate space, each ranked best first.
+        # A single ranked table put a cpt number next to an icd10 one and a
+        # gold number next to a full one, which is the comparison the note
+        # below says cannot be made, and it is the reading that picks a model
+        # on a recall ceiling. `full` leads, because it is the condition that
+        # predicts deployment.
+        groups: dict[tuple[str, str], list[dict]] = {}
+        for run in valid:
+            key = (run["manifest"]["task"], run["manifest"]["candidate_space"])
+            groups.setdefault(key, []).append(run)
+
+        for task, space in sorted(groups, key=lambda key: (key[1] != "full", key[0])):
+            ranked = sorted(
+                groups[(task, space)],
+                key=lambda run: -run["metrics"]["core"]["micro_f1"],
+            )
+            lines += [
+                f"### {task}, {space} candidates",
+                "",
+                "| Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |",
+                "|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|",
+            ]
+            lines += [_row(run) for run in ranked]
+            lines += [""]
+
         lines += [
-            "## Results",
-            "",
-            "| Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |",
-            "|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|",
-        ]
-        lines += [_row(run) for run in valid]
-        lines += [
-            "",
             "**Reading the candidate space.** `gold` offers only the note's correct "
             "codes, so precision is 1.000 by construction and the F1 is a recall "
             "ceiling, not a deployment estimate. `full` offers the whole catalogue "

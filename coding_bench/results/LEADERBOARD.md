@@ -5,18 +5,35 @@ CI regenerates this file and fails if the committed copy differs.
 
 ## Results
 
+### cpt, full candidates
+
+| Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
+|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
+| qwen/qwen3.6-27b | cpt | full | 312 | 0.843 [0.801, 0.886] | 0.525 | 0.924 | 0.570 | 0.846 | 0.0% | 4.2s |
+| openai/gpt-oss-120b | cpt | full | 312 | 0.778 [0.731, 0.821] | 0.507 | 0.851 | 0.547 | 0.724 | 0.0% | 1.5s |
+
+### icd10, full candidates
+
+| Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
+|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
+| qwen/qwen3.6-27b | icd10 | full | 578 | 0.528 [0.512, 0.542] | 0.343 | 0.754 | 0.345 | 0.066 | 1.4% | 11.8s |
+| openai/gpt-oss-120b | icd10 | full | 578 | 0.406 [0.386, 0.427] | 0.211 | 0.616 | 0.242 | 0.054 | 0.7% | 5.6s |
+
+### cpt, gold candidates
+
 | Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
 | qwen/qwen3.6-27b | cpt | gold | 312 | 0.933 [0.911, 0.953] | 0.704 | 0.967 | 0.797 | 0.869 | 0.0% | 2.6s |
 | openai/gpt-oss-120b | cpt | gold | 312 | 0.929 [0.908, 0.949] | 0.704 | 0.963 | 0.797 | 0.862 | 0.0% | 0.8s |
-| qwen/qwen3.6-27b | cpt | full | 312 | 0.843 [0.801, 0.886] | 0.525 | 0.924 | 0.570 | 0.846 | 0.0% | 4.2s |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | gold | 150 | 0.551 [0.468, 0.624] | 0.326 | 0.574 | 0.316 | 0.373 | 0.0% | 19.2s |
+
+### icd10, gold candidates
+
+| Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
+|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
 | qwen/qwen3.6-27b | icd10 | gold | 578 | 0.815 [0.801, 0.829] | 0.571 | 0.935 | 0.682 | 0.360 | 0.5% | 6.7s |
 | openai/gpt-oss-120b | icd10 | gold | 578 | 0.792 [0.779, 0.805] | 0.559 | 0.918 | 0.678 | 0.260 | 0.0% | 2.5s |
-| openai/gpt-oss-120b | cpt | full | 312 | 0.778 [0.731, 0.821] | 0.507 | 0.851 | 0.547 | 0.724 | 0.0% | 1.5s |
 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | icd10 | gold | 150 | 0.706 [0.674, 0.736] | 0.510 | 0.720 | 0.662 | 0.247 | 0.0% | 96.2s |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | gold | 150 | 0.551 [0.468, 0.624] | 0.326 | 0.574 | 0.316 | 0.373 | 0.0% | 19.2s |
-| qwen/qwen3.6-27b | icd10 | full | 578 | 0.528 [0.512, 0.542] | 0.343 | 0.754 | 0.345 | 0.066 | 1.4% | 11.8s |
-| openai/gpt-oss-120b | icd10 | full | 578 | 0.406 [0.386, 0.427] | 0.211 | 0.616 | 0.242 | 0.054 | 0.7% | 5.6s |
 
 **Reading the candidate space.** `gold` offers only the note's correct codes, so precision is 1.000 by construction and the F1 is a recall ceiling, not a deployment estimate. `full` offers the whole catalogue and is the condition that predicts real behaviour. A number from one cannot be compared against a number from the other.
 

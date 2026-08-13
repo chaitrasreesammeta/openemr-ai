@@ -136,6 +136,46 @@ jobs:
               p = pathlib.Path(path)
               return p.read_text(encoding="utf8") if p.exists() else default
 
+          def leaders(board):
+              """The winning row under each `### task, space` heading.
+
+              The full board is four ranked tables and two band sections, which
+              is more than a summary should carry. This is the line someone
+              actually decides on, one per condition, and the link below reaches
+              the rest.
+              """
+              # Scoped to the Results section: Frequency bands uses `###` per
+              # run too, and those rows are not leaders of anything.
+              section = re.search(r"^## Results$(.*?)(?=^## |\Z)", board, re.M | re.S)
+              if not section:
+                  return []
+              out, heading = [], None
+              for line in section.group(1).splitlines():
+                  if line.startswith("### "):
+                      heading = line[4:].strip()
+                  elif heading and line.startswith("|"):
+                      if set(line) <= set("|-: "):
+                          continue
+                      cells = [c.strip() for c in line.strip("|").split("|")]
+                      if cells and cells[0] == "Model":
+                          continue
+                      out.append(cells)
+                      heading = None
+              return out
+
+          def leader_table(board):
+              rows = leaders(board)
+              if not rows:
+                  return
+              print("### Best model per condition")
+              print()
+              print("| Task | Candidates | Best model | n | Micro F1 [95% CI] | Latency |")
+              print("|---|---|---|---:|---|---:|")
+              for c in rows:
+                  cell = lambda i: c[i] if len(c) > i else ""
+                  print(f"| {cell(1)} | {cell(2)} | {cell(0)} | {cell(3)} | {cell(4)} | {cell(10)} |")
+              print()
+
           print("## Coding Bench, checks")
           print()
           log = read("/tmp/pytest.log")
@@ -150,15 +190,23 @@ jobs:
           print()
 
           board = read("coding_bench/results/LEADERBOARD.md")
-          for heading in ("## Results", "## Quarantined runs"):
-              match = re.search(rf"^{re.escape(heading)}$(.*?)(?=^## |\Z)", board, re.M | re.S)
-              if not match:
-                  continue
-              table = [l for l in match.group(1).splitlines() if l.startswith("|")]
-              print(heading)
+          leader_table(board)
+
+          match = re.search(r"^## Quarantined runs$(.*?)(?=^## |\Z)", board, re.M | re.S)
+          table = [l for l in match.group(1).splitlines() if l.startswith("|")] if match else []
+          if table:
+              print("### Quarantined runs")
               print()
-              print("\n".join(table) if table else "_none_")
+              print("\n".join(table))
               print()
+
+          # The commit sha, not the branch: on a pull request the branch name is
+          # a merge ref that does not resolve.
+          print(
+              "Every model, both frequency bands and the head to head: "
+              "[LEADERBOARD.md](https://github.com/${{ github.repository }}/blob/"
+              "${{ github.sha }}/coding_bench/results/LEADERBOARD.md)"
+          )
           PY
 
   evaluate:
@@ -340,6 +388,40 @@ jobs:
               p = pathlib.Path(path)
               return p.read_text(encoding="utf8") if p.exists() else default
 
+          def leaders(board):
+              """The winning row under each `### task, space` heading."""
+              # Scoped to the Results section: Frequency bands uses `###` per
+              # run too, and those rows are not leaders of anything.
+              section = re.search(r"^## Results$(.*?)(?=^## |\Z)", board, re.M | re.S)
+              if not section:
+                  return []
+              out, heading = [], None
+              for line in section.group(1).splitlines():
+                  if line.startswith("### "):
+                      heading = line[4:].strip()
+                  elif heading and line.startswith("|"):
+                      if set(line) <= set("|-: "):
+                          continue
+                      cells = [c.strip() for c in line.strip("|").split("|")]
+                      if cells and cells[0] == "Model":
+                          continue
+                      out.append(cells)
+                      heading = None
+              return out
+
+          def leader_table(board):
+              rows = leaders(board)
+              if not rows:
+                  return
+              print("### Best model per condition")
+              print()
+              print("| Task | Candidates | Best model | n | Micro F1 [95% CI] | Latency |")
+              print("|---|---|---|---:|---|---:|")
+              for c in rows:
+                  cell = lambda i: c[i] if len(c) > i else ""
+                  print(f"| {cell(1)} | {cell(2)} | {cell(0)} | {cell(3)} | {cell(4)} | {cell(10)} |")
+              print()
+
           print("## Coding Bench, evaluation")
           print()
 
@@ -354,29 +436,32 @@ jobs:
                   rows.append(f"{header}\n    {line.strip()}")
                   header = None
           if rows:
+              print("### This run")
+              print()
               print("```")
               print("\n".join(rows))
               print("```")
               print()
 
           board = read("coding_bench/results/LEADERBOARD.md")
-          for heading in ("## Results", "## Quarantined runs", "## Head to head"):
-              match = re.search(rf"^{re.escape(heading)}$(.*?)(?=^## |\Z)", board, re.M | re.S)
-              if not match:
-                  continue
-              table = [l for l in match.group(1).splitlines() if l.startswith("|")]
-              print(heading)
+          leader_table(board)
+
+          # Quarantined runs stay in the summary rather than behind the link.
+          # A run that failed most of its notes still produces a full set of
+          # plausible numbers, so it has to be visible where the numbers are.
+          match = re.search(r"^## Quarantined runs$(.*?)(?=^## |\Z)", board, re.M | re.S)
+          table = [l for l in match.group(1).splitlines() if l.startswith("|")] if match else []
+          if table:
+              print("### Quarantined runs")
               print()
-              print("\n".join(table) if table else "_none_")
+              print("\n".join(table))
               print()
 
-          bands = re.search(r"^## Frequency bands$(.*?)(?=^## |\Z)", board, re.M | re.S)
-          if bands:
-              print("<details><summary>Frequency bands, per run</summary>")
-              print()
-              print(bands.group(1).strip())
-              print()
-              print("</details>")
+          print(
+              "Every model, both frequency bands and the head to head: "
+              "[LEADERBOARD.md](https://github.com/${{ github.repository }}/blob/"
+              "${{ github.ref_name }}/coding_bench/results/LEADERBOARD.md)"
+          )
           PY
 
       - name: Pack the results
