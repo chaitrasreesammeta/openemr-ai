@@ -18,6 +18,11 @@ name: Coding Bench Smoke
 #     drift, which was not true of any workflow until this one
 #   * a run record carrying note text would be a disclosure, and the guard rail
 #     existed with nothing running it
+#
+# Like the other benchmark workflows here, it writes its results to the run
+# summary rather than leaving them in the logs. The leaderboard is the output
+# of this benchmark, so every run shows the current standings and any
+# quarantined runs without anyone having to open the repo.
 
 on:
   push:
@@ -52,27 +57,93 @@ jobs:
           python-version: '3.12'
 
       - name: Install
-        # `modal` is the client library, not a credential. Installing it lets
-        # the adapter tests import and check the model ids and the declared
-        # adapter equivalences, which are skipped without it. With no token set
-        # it still cannot reach anything.
-        run: pip install -e './coding_bench[dev,modal]'
+        # `modal` and `anthropic` are client libraries, not credentials.
+        # Installing them lets the adapter tests import and check model ids,
+        # stop reasons and the declared adapter equivalences, which are skipped
+        # without them. With no token set they still cannot reach anything.
+        run: pip install -e './coding_bench[dev,modal,anthropic]'
 
       - name: Tests
-        run: python -m pytest coding_bench/tests -q
+        id: tests
+        run: |
+          set -o pipefail
+          python -m pytest coding_bench/tests -q 2>&1 | tee /tmp/pytest.log
 
       - name: Leaderboard is current
+        id: leaderboard
         # Regenerating by hand and forgetting to commit the result is the
         # ordinary way a leaderboard starts lying.
         run: python -m coding_bench.bench.reporting --check
 
       - name: No restricted data
+        id: restricted
         # Scoped to coding_bench rather than the whole repo. The other
         # benchmarks here carry result files above the 1 MB ceiling this scan
         # enforces, and failing this job on those would teach everyone to
         # ignore it. `xargs -r` so that a run with no changed files under
         # coding_bench passes instead of scanning the entire tree.
         run: |
+          set -o pipefail
           git fetch --no-tags origin main:refs/remotes/origin/main
           git diff --name-only --diff-filter=ACMR origin/main...HEAD -- coding_bench \
-            | xargs -r python coding_bench/scripts/check_restricted.py
+            | xargs -r python coding_bench/scripts/check_restricted.py | tee /tmp/restricted.log
+
+      - name: Summary
+        # always(), so a failed run still shows what passed before it and where
+        # the leaderboard stood. A red job with an empty summary tells a reader
+        # nothing they can act on.
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import pathlib, re
+
+          def read(path, default=""):
+              p = pathlib.Path(path)
+              return p.read_text(encoding="utf8") if p.exists() else default
+
+          print("## Coding Bench")
+          print()
+
+          # Checks, each reporting its own one-line outcome.
+          pytest_log = read("/tmp/pytest.log")
+          tail = [l for l in pytest_log.splitlines() if "passed" in l or "failed" in l or "error" in l]
+          print("| Check | Result |")
+          print("|---|---|")
+          print(f"| Tier 0 tests | {tail[-1].strip() if tail else 'did not run'} |")
+          print(f"| Leaderboard current | {'${{ steps.leaderboard.outcome }}'} |")
+          restricted = read("/tmp/restricted.log").strip().splitlines()
+          print(f"| Restricted data scan | {restricted[-1] if restricted else 'no coding_bench files changed'} |")
+          print()
+
+          # The benchmark's actual output. Sections are lifted verbatim from the
+          # committed file rather than recomputed, so what the summary shows and
+          # what the repo holds cannot disagree.
+          board = read("coding_bench/results/LEADERBOARD.md")
+          for heading in ("## Results", "## Quarantined runs"):
+              match = re.search(rf"^{re.escape(heading)}$(.*?)(?=^## |\Z)", board, re.M | re.S)
+              if not match:
+                  continue
+              body = match.group(1).strip()
+              # Keep the table and the sentence under it, drop the long prose.
+              lines = [l for l in body.splitlines() if l.strip()]
+              table = [l for l in lines if l.startswith("|")]
+              note = next((l for l in lines if not l.startswith("|")), "")
+              print(heading)
+              print()
+              if note:
+                  print(note)
+                  print()
+              print("\n".join(table) if table else "_none_")
+              print()
+
+          if not board:
+              print("_LEADERBOARD.md is missing._")
+          PY
+
+      - name: Upload leaderboard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coding-bench-leaderboard
+          path: coding_bench/results/LEADERBOARD.md
+          if-no-files-found: warn
