@@ -29,9 +29,14 @@ was worth points in the original ablation:
 
 The original's best configuration, 0.524 micro F1 on CPT, came from enriching
 each description with UMLS synonyms plus LOINC and RadLex terms. Unenriched, the
-same approach scored 0.484. Those tables are built by
-`automated_coding/scripts/fetch_umls_synonyms.py` and its siblings and are not
-in this package, so the default here is the 0.484 configuration.
+same approach scored 0.484, and that is what this defaults to.
+
+The three fetchers that build those tables were retired with the rest of
+`automated_coding/` and are recoverable from git history:
+
+    git show e460fab:automated_coding/scripts/fetch_umls_synonyms.py
+    git show e460fab:automated_coding/scripts/fetch_loinc_radlex.py
+    git show e460fab:automated_coding/scripts/fetch_umls_global.py
 
 `variants` is the seam for that. Pass a mapping of code to extra phrasings and
 this becomes the enriched version; pass nothing and it is honest about being the

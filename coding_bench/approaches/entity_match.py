@@ -1,8 +1,9 @@
 """Entity match: run NER on both sides, then score a code by how much of it
 the note actually mentions.
 
-A rewrite of `automated_coding/approaches/entity_match.py` against this
-package's Predictor protocol. The idea is unchanged and the scoring is
+A rewrite of the retired `automated_coding/approaches/entity_match.py` against
+this package's Predictor protocol (the original is at
+`git show e460fab:automated_coding/approaches/entity_match.py`). The idea is unchanged and the scoring is
 unchanged; what is new is evidence spans, explicit parameters instead of
 environment variables, and a scoring loop that does not re-embed the catalogue
 once per note.
