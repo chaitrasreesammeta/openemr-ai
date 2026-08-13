@@ -5,17 +5,25 @@ into a private volume, MDACE is cloned at a pinned commit, and the parquets are
 written to the gold volume. What comes back over the wire is Tier 1 only, the
 manifests and label spaces, which carry hashes and code lists but no note text.
 
-One time setup, run in your own terminal so the password never enters a log:
+One time setup, run in your own terminal so that no credential enters a log.
+The S3 route is the one to use, and it needs AWS keys and nothing else:
 
-    modal secret create physionet PHYSIONET_USER=<user> PHYSIONET_PASS=<pass>
-
-Optionally add AWS keys to that same secret to unlock the fast S3 mirror. They
-go in the physionet secret rather than a separate one because Modal resolves
-every secret in an app at startup, so an optional second secret would break the
-app for anyone who has not created it:
-
-    modal secret create physionet PHYSIONET_USER=<user> PHYSIONET_PASS=<pass> \
+    modal secret create physionet \
         AWS_ACCESS_KEY_ID=<key> AWS_SECRET_ACCESS_KEY=<secret>
+
+The secret is called `physionet` because it is the one this app declares, not
+because it has to hold a PhysioNet login. A separate `aws` secret would be
+tidier and would break every run that had not created it, since Modal resolves
+every secret in an app at startup.
+
+`PHYSIONET_USER` and `PHYSIONET_PASS` are needed only by the `parallel` and
+`wget` routes, which download over HTTP from PhysioNet directly. The S3 route
+returns before the code ever asks for them. Add them to the same secret if you
+want those fallbacks to work:
+
+    modal secret create physionet \
+        AWS_ACCESS_KEY_ID=<key> AWS_SECRET_ACCESS_KEY=<secret> \
+        PHYSIONET_USER=<user> PHYSIONET_PASS=<pass>
 
 Then:
 
@@ -24,14 +32,16 @@ Then:
     modal run coding_bench/data/build_remote.py --verify-only   # check the volume against the repo
     modal run coding_bench/data/build_remote.py::inspect        # what is on the volumes
 
-Download routes, in the order `auto` picks them: `s3` (requester pays mirror,
-fastest, needs AWS keys), `parallel` (aria2c, 16 connections, no extra
-credentials), `wget` (one connection, slow enough to be a last resort). The
-download is cached on the raw volume, so this cost is paid once.
+Download routes, in the order `auto` picks them: `s3` (fastest, AWS keys only),
+`parallel` (aria2c, 16 connections, PhysioNet login), `wget` (one connection,
+PhysioNet login, slow enough to be a last resort). The download is cached on the
+raw volume, so this cost is paid once.
 
-The PhysioNet account must be credentialed for "MIMIC-III Clinical Database"
-v1.4 specifically. MDACE offsets index NOTEEVENTS.csv ROW_ID, so MIMIC-IV-Note
-cannot substitute for it.
+Whichever route is used, the account behind it must be credentialed for "MIMIC-III
+Clinical Database" v1.4 specifically: for S3 that means an AWS account PhysioNet
+has linked to a credentialed profile, and for the other two the PhysioNet login
+itself. MDACE offsets index NOTEEVENTS.csv ROW_ID, so MIMIC-IV-Note cannot
+substitute for it.
 """
 
 from __future__ import annotations
@@ -47,17 +57,16 @@ import modal
 NOTEEVENTS_URL = "https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz"
 SHASUMS_URL = "https://physionet.org/files/mimiciii/1.4/SHA256SUMS.txt"
 
-# PhysioNet mirrors MIMIC-III into a requester pays S3 bucket. Pulling from
-# there is far faster than the web server, which throttles single connections
-# to a crawl. Requires an AWS account that PhysioNet has linked to your
-# credentialed profile, with AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY added
-# to the physionet secret. Requester pays means the transfer is billed to that
-# AWS account, not to PhysioNet.
-# PhysioNet serves MIMIC-III through an S3 access point rather than a plain
-# bucket, and grants your AWS principal access to that access point when you
-# enable cloud access on the project page. Access point ARNs are addressed
-# directly as the s3:// target, and access is granted rather than requester
-# pays, so no --request-payer flag.
+# PhysioNet mirrors MIMIC-III into S3, which is far faster than the web server,
+# because that throttles a single connection to a crawl. It needs an AWS account
+# that PhysioNet has linked to your credentialed profile, with
+# AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY on the physionet secret.
+#
+# It is served through an S3 access point rather than a plain bucket, and your
+# AWS principal is granted access to that access point when you enable cloud
+# access on the project page. Access point ARNs are addressed directly as the
+# s3:// target, and access is granted rather than requester pays, so there is no
+# --request-payer flag and the transfer is not billed to the caller.
 S3_URI = (
     "s3://arn:aws:s3:us-east-1:724665945834:accesspoint/mimiciii-v1-4-01"
     "/mimiciii/1.4/NOTEEVENTS.csv.gz"

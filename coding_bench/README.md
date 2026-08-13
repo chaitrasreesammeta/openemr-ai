@@ -35,11 +35,18 @@ substituted: the note identifiers are different.
 
 ## Building the gold sets
 
-One time, in your own terminal so the password stays out of any log:
+One time, in your own terminal so that no credential stays in a log. The S3
+route is the one to use, and it needs AWS keys and nothing else:
 
 ```bash
-modal secret create physionet PHYSIONET_USER=<user> PHYSIONET_PASS=<pass>
+modal secret create physionet \
+    AWS_ACCESS_KEY_ID=<key> AWS_SECRET_ACCESS_KEY=<secret>
 ```
+
+The secret is named `physionet` because that is the name this app declares, not
+because it has to hold a PhysioNet login. `PHYSIONET_USER` and `PHYSIONET_PASS`
+belong on the same secret only if you want the `parallel` and `wget` fallbacks
+to work, since the S3 route returns before the code ever asks for them.
 
 Then:
 
@@ -55,14 +62,14 @@ order:
 
 | Source | Speed | Needs |
 |---|---|---|
-| `s3` | Fastest | AWS keys in the `physionet` secret, on an account PhysioNet has linked to your profile. Requester pays, so the transfer is billed to that account |
-| `parallel` | Usually many times faster than wget | Nothing extra, aria2c with 16 connections against the same PhysioNet URL |
-| `wget` | Slow, single connection | Nothing extra. Last resort |
+| `s3` | Fastest | `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, on an AWS account PhysioNet has linked to a credentialed profile. Served through an access point that grants your principal directly, so the transfer is not billed to the caller |
+| `parallel` | Usually many times faster than wget | `PHYSIONET_USER` and `PHYSIONET_PASS`, aria2c with 16 connections against the PhysioNet URL |
+| `wget` | Slow, single connection | `PHYSIONET_USER` and `PHYSIONET_PASS`. Last resort |
 
-The AWS keys go in the `physionet` secret rather than their own, because Modal
-resolves every secret in an app at startup, so an optional second secret would
-break the build for anyone who has not created it. The download is cached on
-the raw volume, so this cost is paid once.
+Everything goes on the one `physionet` secret rather than an `aws` secret beside
+it, because Modal resolves every secret in an app at startup, so a second
+optional secret would break the build for anyone who has not created it. The
+download is cached on the raw volume, so this cost is paid once.
 
 The build downloads NOTEEVENTS from PhysioNet straight into a private volume,
 clones the pinned MDACE, joins them, and writes the parquets to
