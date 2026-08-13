@@ -69,6 +69,14 @@ jobs:
           set -o pipefail
           python -m pytest coding_bench/tests -q 2>&1 | tee /tmp/pytest.log
 
+      - name: Metrics match the predictions
+        id: rescore
+        # A change to metrics.py does not need an inference run: every
+        # prediction is already committed. This fails if any stored metric
+        # disagrees with the current code, and the fix it names costs nothing
+        # and calls no model.
+        run: python -m coding_bench.bench.rescore --check
+
       - name: Leaderboard is current
         id: leaderboard
         # Regenerating by hand and forgetting to commit the result is the
@@ -110,6 +118,7 @@ jobs:
           print("| Check | Result |")
           print("|---|---|")
           print(f"| Tier 0 tests | {tail[-1].strip() if tail else 'did not run'} |")
+          print(f"| Metrics match predictions | {'${{ steps.rescore.outcome }}'} |")
           print(f"| Leaderboard current | {'${{ steps.leaderboard.outcome }}'} |")
           restricted = read("/tmp/restricted.log").strip().splitlines()
           print(f"| Restricted data scan | {restricted[-1] if restricted else 'no coding_bench files changed'} |")
@@ -119,7 +128,7 @@ jobs:
           # committed file rather than recomputed, so what the summary shows and
           # what the repo holds cannot disagree.
           board = read("coding_bench/results/LEADERBOARD.md")
-          for heading in ("## Results", "## Quarantined runs"):
+          for heading in ("## Results", "## Quarantined runs", "## Head to head"):
               match = re.search(rf"^{re.escape(heading)}$(.*?)(?=^## |\Z)", board, re.M | re.S)
               if not match:
                   continue
@@ -134,6 +143,18 @@ jobs:
                   print(note)
                   print()
               print("\n".join(table) if table else "_none_")
+              print()
+
+          # Frequency bands last and folded away: one table per run makes a long
+          # page, and the head to tail gap is the number this benchmark exists
+          # to show, so it belongs in the summary rather than only in the repo.
+          bands = re.search(r"^## Frequency bands$(.*?)(?=^## |\Z)", board, re.M | re.S)
+          if bands:
+              print("<details><summary>Frequency bands, per run</summary>")
+              print()
+              print(bands.group(1).strip())
+              print()
+              print("</details>")
               print()
 
           if not board:

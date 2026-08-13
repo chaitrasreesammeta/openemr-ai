@@ -182,3 +182,54 @@ def test_deduplication_survives_a_record_with_no_start_time():
     rendered = reporting.render([small, large])
     assert "| 578 |" in rendered
     assert "| 150 |" not in rendered, "the better covered run supersedes the short one"
+
+
+# --------------------------------------------------------------------------
+# Rescoring: a metric change must not cost an inference run
+
+
+def test_rescore_recomputes_the_metrics_a_record_can_support():
+    """A changed metric is a question about stored predictions, not the model."""
+    from coding_bench.bench import rescore
+
+    run = with_predictions(make_run("r", 0.1), [str(i) for i in range(60)], True)
+    run["metrics"]["core"]["micro_f1"] = 0.1  # stale, as a metrics edit would leave it
+
+    fresh = rescore.rescored(run)
+    # Every prediction is correct in this fixture, so the recomputed score is 1.
+    assert fresh["core"]["micro_f1"] == 1.0
+    assert fresh["uncertainty"]["micro_f1_ci95"] != run["metrics"]["uncertainty"]["micro_f1_ci95"]
+
+
+def test_rescore_preserves_what_a_record_cannot_recompute():
+    """Zeroing these would read as a model that stopped citing its work.
+
+    Evidence needs MDACE's gold spans and scaling needs the offered candidate
+    list; a record carries neither. Latency is preserved for a different reason:
+    the record rounds per note latency, so recomputing the mean would be less
+    accurate than the value the runner measured.
+    """
+    from coding_bench.bench import rescore
+
+    run = with_predictions(make_run("r", 0.5), [str(i) for i in range(60)], True)
+    run["metrics"]["evidence"] = {"evidence_coverage": 0.87}
+    run["metrics"]["scaling"] = {"distractor_fp_rate": 0.42}
+    run["metrics"]["operational"]["error_rate"] = 0.03
+    run["metrics"]["operational"]["latency_mean_s"] = 2.5
+
+    fresh = rescore.rescored(run)
+    assert fresh["evidence"]["evidence_coverage"] == 0.87
+    assert fresh["scaling"]["distractor_fp_rate"] == 0.42
+    assert fresh["operational"]["error_rate"] == 0.03
+    assert fresh["operational"]["latency_mean_s"] == 2.5
+
+
+def test_rescore_check_is_clean_on_the_committed_records():
+    """The committed metrics agree with the metrics code, so CI has a baseline.
+
+    If this fails, the fix is `python -m coding_bench.bench.rescore`, which calls
+    no model and spends nothing.
+    """
+    from coding_bench.bench import rescore
+
+    assert rescore.run(check=True) == 0

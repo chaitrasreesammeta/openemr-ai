@@ -219,9 +219,15 @@ def evaluate(
 
     provider = EXTERNAL_PROVIDERS.get(model)
     if provider and task in ("cpt", "icd10"):
+        # States what is happening, not that it is allowed. The old wording
+        # asserted the provider was "cleared for MIMIC derived data" for every
+        # entry in the table, which was true of the one provider in it when it
+        # was written and became a claim the code cannot check the moment a
+        # second was added. Clearance is a fact about an agreement; a run can
+        # record which provider saw the text and nothing more.
         print(
-            f"Note text for {task} will be sent to {provider}, which is cleared for "
-            f"MIMIC derived data and is recorded in the run manifest.",
+            f"Note text for {task} is being sent to {provider}. Recorded in the run "
+            f"manifest as external_provider so this stays answerable later.",
             flush=True,
         )
 
