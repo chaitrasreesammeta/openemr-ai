@@ -285,20 +285,50 @@ jobs:
           git commit -m "Bank coding_bench results from CI"
           # Rebase before pushing. These runs are long enough that someone can
           # push meanwhile, and a rejected push after paid inference would
-          # strand the result.
-          git fetch origin "${{ github.ref_name }}"
-          if ! git rebase "origin/${{ github.ref_name }}"; then
-            git checkout --ours coding_bench/results/LEADERBOARD.md 2>/dev/null || true
-            git add -A coding_bench/results
-            GIT_EDITOR=true git rebase --continue || {
-              echo "::error::Rebase failed. The records are in the run artifact and nothing is lost; commit them by hand."
-              exit 1
-            }
+          # strand the result. The loop covers the window between the fetch and
+          # the push, which is small but is exactly where a second pusher wins.
+          for attempt in 1 2 3; do
+            git fetch origin "${{ github.ref_name }}"
+            # --autostash because a rebase refuses to start on a dirty tree,
+            # and only coding_bench/results is ever staged. Anything a build
+            # step regenerates elsewhere would otherwise strand the records
+            # with an error about a rebase that never began.
+            if ! git rebase --autostash "origin/${{ github.ref_name }}"; then
+              # The leaderboard is generated, so a conflict in it is not a
+              # decision anyone needs to make. Take whatever upstream has and
+              # regenerate below. During a rebase `ours` is upstream and
+              # `theirs` is the commit being replayed, which is this one.
+              git checkout --ours coding_bench/results/LEADERBOARD.md 2>/dev/null || true
+              git add coding_bench/results/LEADERBOARD.md 2>/dev/null || true
+              # Anything still unmerged is a run record, and a record is
+              # evidence. Staging those blind writes conflict markers into the
+              # JSON, and reporting then skips the unreadable file, so the run
+              # drops off the board and the job still goes green.
+              unmerged=$(git diff --name-only --diff-filter=U)
+              if [ -n "$unmerged" ]; then
+                git rebase --abort
+                echo "::error::Conflicting run records, nothing pushed: $(echo "$unmerged" | tr '\n' ' '). The records are in the run artifact and nothing is lost; merge them by hand."
+                exit 1
+              fi
+              GIT_EDITOR=true git rebase --continue || {
+                echo "::error::Rebase failed. The records are in the run artifact and nothing is lost; commit them by hand."
+                exit 1
+              }
+            fi
+            # After every rebase, conflicted or not. Upstream may have banked
+            # records this commit has never seen, and the board is generated
+            # from all of them, so skipping this pushes a stale board that
+            # fails much later on somebody else's unrelated push.
             python -m coding_bench.bench.reporting
             git add -A coding_bench/results
             git diff --cached --quiet || git commit --amend --no-edit
-          fi
-          git push origin "HEAD:${{ github.ref_name }}"
+            if git push origin "HEAD:${{ github.ref_name }}"; then
+              exit 0
+            fi
+            echo "Push rejected, so someone landed a commit while this rebased. Attempt $attempt of 3."
+          done
+          echo "::error::Push kept being rejected. The records are in the run artifact and nothing is lost; commit them by hand."
+          exit 1
 
       - name: Summary
         if: always()
@@ -349,12 +379,20 @@ jobs:
               print("</details>")
           PY
 
+      - name: Pack the results
+        if: always()
+        # Model ids become file names, and some of them carry a colon, which
+        # upload-artifact rejects. It refuses the entire upload rather than the
+        # one file, so the artifact that every error message above promises was
+        # missing on the first run that needed it. A tar has no such rule.
+        # Predictions are the local cache and are excluded, as they are large
+        # and are gitignored for the same reason.
+        run: tar -czf /tmp/coding-bench-results.tar.gz --exclude=predictions -C coding_bench/results .
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coding-bench-results
-          path: |
-            coding_bench/results/LEADERBOARD.md
-            coding_bench/results/runs/*.json
+          path: /tmp/coding-bench-results.tar.gz
           if-no-files-found: warn
