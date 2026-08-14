@@ -221,6 +221,64 @@ def test_an_unnamed_model_is_not_given_an_invented_label():
 
 
 # --------------------------------------------------------------------------
+# The README summary block: the most read table in the repo, generated
+
+
+def test_the_summary_names_the_winner_of_each_condition():
+    gold = make_run("winner", 0.9, candidates="gold")
+    also_gold = make_run("runner-up", 0.6, candidates="gold")
+    full = make_run("full-winner", 0.5, candidates="full")
+
+    block = reporting.summary_block([gold, also_gold, full])
+    assert "model-winner" in block
+    assert "model-full-winner" in block
+    assert "model-runner-up" not in block, "the summary carries the winner, not the table"
+    # `full` predicts deployment, so it leads, exactly as on the board.
+    assert block.index("full") < block.index("gold")
+
+
+def test_a_quarantined_run_never_wins_a_condition():
+    """The summary is the number most people will read, so this matters most here."""
+    block = reporting.summary_block(
+        [make_run("clean", 0.5), make_run("failed", 0.99, error_rate=0.9)]
+    )
+    assert "model-clean" in block
+    assert "model-failed" not in block
+
+
+def test_the_summary_replaces_only_what_is_between_the_markers():
+    readme = (
+        "# Project\n\nSome prose that must survive.\n\n"
+        f"{reporting.SUMMARY_START}\nstale table\n{reporting.SUMMARY_END}\n\nMore prose.\n"
+    )
+    updated = reporting.with_summary(readme, reporting.summary_block([make_run("r", 0.7)]))
+    assert "Some prose that must survive." in updated
+    assert "More prose." in updated
+    assert "stale table" not in updated
+    assert updated.count(reporting.SUMMARY_START) == 1
+
+
+def test_a_readme_without_markers_is_left_alone():
+    """Better to change nothing than to guess where a table belongs."""
+    readme = "# Project\n\nNo markers here.\n"
+    assert reporting.with_summary(readme, "anything") == readme
+
+
+def test_the_repo_readme_still_has_its_markers():
+    """Losing the markers would silently stop the README from being updated."""
+    text = reporting.REPO_README.read_text(encoding="utf8")
+    assert reporting.SUMMARY_START in text
+    assert reporting.SUMMARY_END in text
+
+
+def test_the_committed_readme_summary_is_current():
+    """The fix is `python -m coding_bench.bench.reporting`, which spends nothing."""
+    text = reporting.REPO_README.read_text(encoding="utf8")
+    wanted = reporting.with_summary(text, reporting.summary_block(reporting.load_runs()))
+    assert text == wanted, "regenerate the README summary block and commit it"
+
+
+# --------------------------------------------------------------------------
 # Rescoring: a metric change must not cost an inference run
 
 

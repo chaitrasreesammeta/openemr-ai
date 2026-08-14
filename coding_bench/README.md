@@ -7,6 +7,13 @@ public log by accident. That is not a policy, it is the shape of the code: the
 gold sets live on a private Modal volume, evaluation of restricted data runs
 inside Modal, and the run record writer raises rather than serialise a note.
 
+**Results: [`results/LEADERBOARD.md`](results/LEADERBOARD.md).** Four ranked
+tables, one per task and candidate space, plus frequency bands, paired
+significance, quarantined runs and per run provenance. It is generated from the
+committed run records by `bench/reporting.py`, along with the four row summary
+in the repository [README](../README.md#automated-cpt-and-icd-10-coding), and CI
+fails if either is stale. Neither is ever edited by hand.
+
 ## Data tiers
 
 | Tier | Content | Where it lives | Who can read it |
@@ -108,19 +115,29 @@ that predicts how a model behaves against a real catalogue.
 
 ## Models
 
-| Name | Where it runs | Sends note text off Modal |
-|---|---|---|
-| `qwen3.6-27b` | Groq, `qwen/qwen3.6-27b` | Yes, to Groq |
-| `gpt-oss-120b` | Groq, `openai/gpt-oss-120b` | Yes, to Groq |
-| `muse-glimmer-30b-gguf` | Modal H100, llama.cpp, `Muse-Glimmer-30B-GGUF:kquant-dynamic` | No |
-| `muse-glimmer-30b` | Modal H100, transformers, bf16 weights | No |
-| `gemma4-26b-a4b-gguf` | Modal GPU, llama.cpp, `gemma-4-26B-A4B-it:qat-UD-Q4_K_XL` | No |
-| `retrieval` | CPU, BGE embeddings | No |
+Values for `--model`. The leaderboard calls each of these by a short name and
+keys on the exact model id; `reporting.MODEL_NAMES` maps between the two, and
+the board's `## Models` section prints the mapping.
 
-The two Groq models post note text to a hosted inference service. The
-provider that saw the text is written into every run manifest as
+| `--model` | Board name | Where it runs | Sends note text off Modal |
+|---|---|---|---|
+| `qwen3.6-27b` | Qwen3.6 27B | Groq, `qwen/qwen3.6-27b` | Yes, to Groq |
+| `gpt-oss-120b` | GPT-OSS 120B | Groq, `openai/gpt-oss-120b` | Yes, to Groq |
+| `sonnet-5` | Claude Sonnet 5 | Anthropic, `claude-sonnet-5` | Yes, to Anthropic |
+| `muse-glimmer-30b-gguf` | Muse Glimmer 30B | Modal RTX PRO 6000, llama.cpp, `Muse-Glimmer-30B-GGUF:kquant-dynamic` | No |
+| `muse-glimmer-30b` | (never banked) | Modal H100, transformers, bf16 weights | No |
+| `gemma4-26b-a4b-gguf` | Gemma 4 26B-A4B | Modal RTX PRO 6000, llama.cpp, `gemma-4-26B-A4B-it:qat-UD-Q4_K_XL` | No |
+
+`--approach` takes `llm` (the default), `retr_llm`, and the three that need no
+model at all: `retrieval` (BGE embeddings), `embed_match` and `entity_match`.
+Those three run on CPU and send nothing anywhere.
+
+The three hosted models post note text to somebody else's inference service.
+The provider that saw the text is written into every run manifest as
 `external_provider`, so the provenance of a number stays answerable without
-anyone having to remember which runs went where.
+anyone having to remember which runs went where. Anthropic is a second provider
+and a second clearance question; the governance note at the top of
+`adapters/api_anthropic.py` is worth reading before running it.
 
 **Zero Data Retention must stay on for the Groq account.** By default Groq
 retains inputs and outputs for up to 30 days for reliability and abuse
@@ -149,11 +166,13 @@ out of preference.
 **Gemma 4 is quantised too, and its adapter is a reconstruction.** The model is
 a mixture of experts, 26B parameters with about 4B active per token, served as
 Google's QAT weights in Unsloth's dynamic 4 bit build. Its id carries that build
-for the same reason Muse's does. Two runs of it are banked, both quarantined,
-and the adapter that produced them was written on another machine and never
-pushed, so `adapters/modal_gemma4_gguf.py` reproduces the configuration their
-manifests record rather than the original bytes. Their `adapter_sha256` will not
-match the committed file, and the docstring says so at the top.
+for the same reason Muse's does. Four runs of it are banked and all four are
+quarantined, every one on truncation, so Gemma has no score on the board and
+nothing about it should be quoted as one. The adapter that produced them was
+written on another machine and never pushed, so `adapters/modal_gemma4_gguf.py`
+reproduces the configuration their manifests record rather than the original
+bytes. Their `adapter_sha256` will not match the committed file, and the
+docstring says so at the top.
 
 ## Cost and the prediction cache
 
@@ -180,7 +199,7 @@ Other things that drive the bill:
   does not go faster, it just converts requests into 429s and retries.
 - Groq's batch API is cheaper but depends on data retention, so zero data
   retention rules it out. Compliance wins that trade.
-- GPU containers scale down after 90 seconds idle. An H100 waiting between runs
+- GPU containers scale down after 90 seconds idle. A card waiting between runs
   costs the same as one doing work.
 - `--limit` exists for iteration. Full runs are for numbers you intend to keep.
 
@@ -257,35 +276,59 @@ coding_bench/
     loaders.py          tier aware loading, checksum verification
     metrics.py          every metric, unit tested against hand computed cases
     runner.py           the evaluation loop and the run record writer
-    reporting.py        LEADERBOARD.md generation, quarantine, head to head
+    cache.py            the prediction cache and its key
+    rescore.py          recompute metrics from stored predictions, no inference
+    reporting.py        LEADERBOARD.md and the root README summary block
   approaches/
     base.py             the Predictor protocol, Truncated, span location
     retrieval.py        BGE embedding baseline, CPU only
+    embed_match.py      embedding nearest neighbour over code descriptions
+    entity_match.py     entity extraction then string match
     llm.py              direct prompting with quoted evidence
     retr_llm.py         retrieval shortlist, then the model selects
   adapters/
-    api_groq.py         Qwen 3.6 27B and GPT OSS 120B over HTTP
-    modal_muse.py       Muse Glimmer 30B on a Modal H100
-    modal_gemma4_gguf.py  Gemma 4 26B A4B, QAT 4 bit, on a Modal GPU
+    api_groq.py         Qwen3.6 27B and GPT-OSS 120B over HTTP
+    api_anthropic.py    Claude Sonnet 5 over HTTP
+    modal_muse.py       Muse Glimmer 30B, bf16 transformers, Modal H100
+    modal_muse_gguf.py  Muse Glimmer 30B, dynamic K-quant, llama.cpp
+    modal_gemma4_gguf.py  Gemma 4 26B-A4B, QAT 4 bit, llama.cpp
   scripts/              guard rails, and probes for why a model went quiet
-  tests/                128 tests, no network, no GPU, no restricted data
+  tests/                no network, no GPU, no restricted data
+  run_chain*.py         detached multi step runs that outlive their client
   eval_remote.py        Modal entrypoint for Tier 2 evaluation
 ```
 
+The `run_chain*.py` files are one per campaign rather than one parameterised
+runner. Each carries the reasoning for its own configuration in its docstring,
+which is the part worth keeping once the run is over.
+
 ## CI
 
-`.github/workflows/coding-bench-smoke.yml` runs on every push and pull request
-that touches this package: the Tier 0 suite, `reporting --check`, and the
-restricted data scan over the changed files here. It has no Modal token and no
-provider key, so it cannot run inference and cannot spend anything.
+`.github/workflows/coding-bench.yml` is one workflow with two jobs, and the
+second waits on the first:
 
-`coding-bench-full.yml` does not exist yet. When it does it must be manual
-dispatch rather than pull request, because Tier 2 evaluation needs the
-PhysioNet credentialed Modal workspace and Actions does not expose secrets to
-forks. It should spawn the detached chain and return, rather than hold a runner
-open for the hours a full run takes.
+- **`checks`** runs on every push and pull request that touches this package:
+  the Tier 0 suite, `rescore --check`, `reporting --check`, and the restricted
+  data scan over the changed files here. It has no Modal token and no provider
+  key, so it structurally cannot run inference and cannot spend anything.
+- **`evaluate`** runs the hosted leaderboard set against Modal, regenerates the
+  board and the README summary, and commits the run records back to the branch.
+  Never on a pull request: a fork cannot see the secrets, and paying for a
+  stranger's branch is not something this repo should do by default.
 
-**Neither workflow re-runs inference that has already been paid for.** A note is
+They were two files once and ran in parallel, so a commit that broke the tests
+still bought inference: the suite went red at minute one while the evaluation
+spent twenty dollars discovering the same thing at minute thirty. `needs: checks`
+closed that.
+
+GPU models are not in the pushed set. Muse and Gemma take hours and run as
+detached chains that outlive any client, so they are launched by hand and banked
+afterwards with a dispatch of `action: collect`, which pulls any finished record
+off the volume into git. A change to the prompt or to the gold manifests
+invalidates every model's cache, so `evaluate` refuses to do that from a push
+and asks for a dispatch with `confirm_full_rerun`.
+
+**Neither job re-runs inference that has already been paid for.** A note is
 regenerated only when something that can change its answer changed: the gold
 manifest checksum, the model, the adapter, the prompt, the offered candidates or
 the run parameters. Everything else is served from the prediction cache and from

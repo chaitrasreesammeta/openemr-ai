@@ -353,8 +353,12 @@ jobs:
           python -m coding_bench.bench.reporting
 
       - name: Guard the records before committing
+        # README.md too: `reporting` regenerates the summary block in it, and
+        # staging only the records would leave that block behind and fail the
+        # next push's `reporting --check` on a file this job had already
+        # rewritten and thrown away.
         run: |
-          git add -A coding_bench/results
+          git add -A coding_bench/results README.md
           git diff --cached --name-only | xargs -r python coding_bench/scripts/check_restricted.py
 
       - name: Commit results
@@ -381,8 +385,13 @@ jobs:
               # decision anyone needs to make. Take whatever upstream has and
               # regenerate below. During a rebase `ours` is upstream and
               # `theirs` is the commit being replayed, which is this one.
-              git checkout --ours coding_bench/results/LEADERBOARD.md 2>/dev/null || true
-              git add coding_bench/results/LEADERBOARD.md 2>/dev/null || true
+              # README.md is only partly generated, so taking upstream's copy
+              # keeps any prose somebody landed meanwhile and the regeneration
+              # below puts this run's numbers back between the markers.
+              for generated in coding_bench/results/LEADERBOARD.md README.md; do
+                git checkout --ours "$generated" 2>/dev/null || true
+                git add "$generated" 2>/dev/null || true
+              done
               # Anything still unmerged is a run record, and a record is
               # evidence. Staging those blind writes conflict markers into the
               # JSON, and reporting then skips the unreadable file, so the run
@@ -403,7 +412,7 @@ jobs:
             # from all of them, so skipping this pushes a stale board that
             # fails much later on somebody else's unrelated push.
             python -m coding_bench.bench.reporting
-            git add -A coding_bench/results
+            git add -A coding_bench/results README.md
             git diff --cached --quiet || git commit --amend --no-edit
             if git push origin "HEAD:${{ github.ref_name }}"; then
               exit 0
