@@ -12,6 +12,7 @@ CI regenerates this file and fails if the committed copy differs.
 | qwen/qwen3.6-27b | cpt | full | 312 | 0.843 [0.801, 0.886] | 0.525 | 0.924 | 0.570 | 0.846 | 0.0% | 4.2s |
 | claude-sonnet-5 | cpt | full | 312 | 0.812 [0.767, 0.859] | 0.479 | 0.904 | 0.503 | 0.817 | 0.0% | 2.3s |
 | openai/gpt-oss-120b | cpt | full | 312 | 0.778 [0.731, 0.821] | 0.507 | 0.851 | 0.547 | 0.724 | 0.0% | 1.5s |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | full | 312 | 0.639 [0.584, 0.690] | 0.436 | 0.678 | 0.519 | 0.526 | 0.0% | 20.9s |
 
 ### icd10, full candidates
 
@@ -86,6 +87,9 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | micro_f1 | +0.0651 | [+0.0358, +0.0954] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | macro_f1 | +0.0182 | [-0.0227, +0.0695] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | exact_match | +0.1218 | [+0.0833, +0.1635] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | micro_f1 | +0.2048 | [+0.1609, +0.2534] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | macro_f1 | +0.0893 | [+0.0396, +0.1470] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | exact_match | +0.3205 | [+0.2692, +0.3782] | **yes** |
 | qwen/qwen3.6-27b | claude-sonnet-5 | gold | 578 | micro_f1 | +0.0038 | [-0.0072, +0.0153] | no |
 | qwen/qwen3.6-27b | claude-sonnet-5 | gold | 578 | macro_f1 | +0.0015 | [-0.0166, +0.0193] | no |
 | qwen/qwen3.6-27b | claude-sonnet-5 | gold | 578 | exact_match | +0.0433 | [+0.0173, +0.0692] | **yes** |
@@ -98,6 +102,9 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | claude-sonnet-5 | openai/gpt-oss-120b | full | 312 | micro_f1 | +0.0338 | [+0.0013, +0.0658] | **yes** |
 | claude-sonnet-5 | openai/gpt-oss-120b | full | 312 | macro_f1 | -0.0278 | [-0.0921, +0.0327] | no |
 | claude-sonnet-5 | openai/gpt-oss-120b | full | 312 | exact_match | +0.0929 | [+0.0513, +0.1346] | **yes** |
+| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | micro_f1 | +0.1736 | [+0.1262, +0.2234] | **yes** |
+| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | macro_f1 | +0.0433 | [-0.0394, +0.1215] | no |
+| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | exact_match | +0.2917 | [+0.2340, +0.3494] | **yes** |
 | claude-sonnet-5 | openai/gpt-oss-120b | gold | 578 | micro_f1 | +0.0189 | [+0.0083, +0.0289] | **yes** |
 | claude-sonnet-5 | openai/gpt-oss-120b | gold | 578 | macro_f1 | +0.0104 | [-0.0030, +0.0347] | no |
 | claude-sonnet-5 | openai/gpt-oss-120b | gold | 578 | exact_match | +0.0571 | [+0.0294, +0.0848] | **yes** |
@@ -107,6 +114,9 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0542 | [+0.0273, +0.0805] | **yes** |
 | openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0518 | [+0.0185, +0.0814] | **yes** |
 | openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.0533 | [+0.0000, +0.1133] | no |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | micro_f1 | +0.1398 | [+0.0970, +0.1856] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | macro_f1 | +0.0711 | [+0.0036, +0.1310] | **yes** |
+| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | exact_match | +0.1987 | [+0.1506, +0.2532] | **yes** |
 | qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | micro_f1 | +0.0054 | [-0.0099, +0.0179] | no |
 | qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | macro_f1 | +0.0265 | [+0.0099, +0.0416] | **yes** |
 | qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | exact_match | -0.0069 | [-0.0277, +0.0138] | no |
@@ -208,6 +218,14 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 35 | 261 | 1.000 | 0.682 | 0.811 | 0.742 |
 | tail | 490 | 766 | 1.000 | 0.495 | 0.662 | 0.489 |
 
+### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, cpt, candidates full
+
+| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| head | 10 | 251 | 0.874 | 0.554 | 0.678 | 0.682 |
+| torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| tail | 51 | 74 | 0.574 | 0.473 | 0.519 | 0.388 |
+
 ### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, cpt, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
@@ -258,6 +276,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260812T035127Z`: dataset `3e4376d906ea`, git `4d973679a655`, provider modal only
 - `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260813T130241Z`: dataset `3e4376d906ea`, git `0831276676e5`, provider modal only
 - `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260813T144158Z`: dataset `3e4376d906ea`, git `e188bb34861a`, provider modal only
+- `cpt__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candfull__20260814T103548Z`: dataset `3e4376d906ea`, git `f4cedc389ae9`, provider modal only
 - `cpt__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260812T012652Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider modal only
 - `cpt__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260813T133934Z`: dataset `3e4376d906ea`, git `0831276676e5`, provider modal only
 - `cpt__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260813T151732Z`: dataset `3e4376d906ea`, git `e188bb34861a`, provider modal only
