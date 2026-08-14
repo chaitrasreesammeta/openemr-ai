@@ -23,7 +23,7 @@ Setup and quick-start: [`smart-ambient-listening/README.md`](smart-ambient-liste
 
 ## Research experiments ([`experiments`](../../tree/experiments) branch)
 
-The `experiments` branch contains the benchmarks, ablations, and statistical analyses that informed model selection for the deployed app. Three experiment tracks:
+The `experiments` branch contains the benchmarks, ablations, and statistical analyses that informed model selection for the deployed app. Four experiment tracks:
 
 ### 1. ASR word-error-rate benchmark
 13 ASR models evaluated on **335 clinical conversations + 380 short-form utterances** across four datasets (institutional IU recordings, Kaggle medical dictation, PriMock57, Fareez OSCE).
@@ -50,7 +50,18 @@ See [`rag_models/`](../../tree/experiments/rag_models) on the experiments branch
 - The **ELM Simplifier (deterministic key-value extractor) behaves as a quantization-compensation mechanism**: at Q4_K_M deployment precision, dense Gemma 4 31B loses 14.6 pp without it (82.9→68.3), while the 4B-active MoE Gemma 4 26B A4B is unaffected (+2.0 pp). CPG reference is the dominant scaffold — removing it costs 14–33 pp across frontier models.
 - Models **≤4B uniformly fall below the 48.4% naive baseline**, establishing a capability threshold around 20B total / 4B active parameters for ELM validation. Medical pretraining (MedGemma) shows no consistent advantage.
 
-Also on the experiments branch: **automated CPT coding** on MDACE Profee (312 MIMIC-III notes) — Gemma 4 26B-A4B F1 = 0.793 vs. the best non-LLM retrieval baseline F1 = 0.524. See [`cdr_elmjson_validator/`](../../tree/experiments/cdr_elmjson_validator) and [`automated_coding/`](../../tree/experiments/automated_coding).
+See [`cdr_elmjson_validator/`](../../tree/experiments/cdr_elmjson_validator) on the experiments branch.
+
+### 4. Automated CPT and ICD-10 coding
+Multi-label coding from clinical notes on MDACE Profee: **312 MIMIC-III notes over 61 CPT codes, and 578 notes over 673 ICD-10-CM codes**. Hosted models (Claude Sonnet 5, GPT-OSS-120B, Qwen3.6-27B) against self-hosted quantised models (Muse Glimmer 30B, Gemma 4 26B-A4B) on the same gold labels, prompt and candidate lists. Every number carries a bootstrap 95% interval, and a run that fails more than 5% of its notes is quarantined rather than scored.
+
+- **The candidate space is most of the result.** Offering a model only the note's correct codes pins precision at 1.000 by construction, so that score is a recall ceiling and not a deployment estimate. Qwen3.6-27B scores **0.815 micro F1 on ICD-10 at gold candidates and 0.528 against the full 673-code catalogue**. Published coding numbers that do not say which condition they measured are not comparable with either.
+- **The long tail is where the collapse happens.** Against the full catalogue the best model reaches 0.755 F1 on the ten most frequent ICD-10 codes and 0.344 on codes with five or fewer gold mentions. A single macro F1 hides that gap.
+- **Self-hosting costs about ten points.** Muse Glimmer 30B at roughly 4-bit reaches 0.423 on ICD-10 full against 0.528 for the best hosted model, with no note text leaving our own GPU, though at a 4.0% note-failure rate that sits just inside the quarantine ceiling. That is the privacy-versus-accuracy trade in the form a deployment decision actually takes.
+
+Ranked tables, frequency bands, paired significance tests and quarantined runs: [`coding_bench/results/LEADERBOARD.md`](../../blob/experiments/coding_bench/results/LEADERBOARD.md). The board is generated from committed run records and CI fails if it is stale.
+
+An earlier `automated_coding/` package covered the CPT half with traditional NLP baselines. It was retired once `coding_bench` covered the same ground with a gold-set contract, a prediction cache and per-run provenance, and its numbers are not comparable with the board above. It remains in git history on the experiments branch.
 
 ## Citation
 
