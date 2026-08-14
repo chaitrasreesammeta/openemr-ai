@@ -19,6 +19,7 @@ CI regenerates this file and fails if the committed copy differs.
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
 | qwen/qwen3.6-27b | icd10 | full | 578 | 0.528 [0.512, 0.542] | 0.343 | 0.755 | 0.344 | 0.066 | 1.0% | 12.0s |
 | claude-sonnet-5 | icd10 | full | 578 | 0.523 [0.506, 0.538] | 0.316 | 0.748 | 0.343 | 0.073 | 0.0% | 8.3s |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | icd10 | full | 578 | 0.423 [0.401, 0.445] | 0.233 | 0.617 | 0.247 | 0.047 | 4.0% | 119.0s |
 | openai/gpt-oss-120b | icd10 | full | 578 | 0.408 [0.388, 0.428] | 0.211 | 0.618 | 0.241 | 0.054 | 0.2% | 5.5s |
 
 ### cpt, gold candidates
@@ -109,12 +110,21 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | micro_f1 | +0.0054 | [-0.0099, +0.0179] | no |
 | qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | macro_f1 | +0.0265 | [+0.0099, +0.0416] | **yes** |
 | qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | exact_match | -0.0069 | [-0.0277, +0.0138] | no |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | micro_f1 | +0.1047 | [+0.0830, +0.1283] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | macro_f1 | +0.1100 | [+0.0882, +0.1352] | **yes** |
+| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | exact_match | +0.0190 | [-0.0017, +0.0398] | no |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | micro_f1 | +0.1203 | [+0.1020, +0.1399] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | macro_f1 | +0.1316 | [+0.1143, +0.1560] | **yes** |
 | qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | exact_match | +0.0121 | [-0.0070, +0.0294] | no |
+| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | micro_f1 | +0.0993 | [+0.0771, +0.1230] | **yes** |
+| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | macro_f1 | +0.0836 | [+0.0654, +0.1073] | **yes** |
+| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | exact_match | +0.0260 | [+0.0035, +0.0484] | **yes** |
 | claude-sonnet-5 | openai/gpt-oss-120b | full | 578 | micro_f1 | +0.1149 | [+0.0984, +0.1315] | **yes** |
 | claude-sonnet-5 | openai/gpt-oss-120b | full | 578 | macro_f1 | +0.1052 | [+0.0921, +0.1280] | **yes** |
 | claude-sonnet-5 | openai/gpt-oss-120b | full | 578 | exact_match | +0.0190 | [+0.0035, +0.0346] | **yes** |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | openai/gpt-oss-120b | full | 578 | micro_f1 | +0.0156 | [-0.0090, +0.0398] | no |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | openai/gpt-oss-120b | full | 578 | macro_f1 | +0.0216 | [-0.0018, +0.0464] | no |
+| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | openai/gpt-oss-120b | full | 578 | exact_match | -0.0069 | [-0.0260, +0.0121] | no |
 
 ## Frequency bands
 
@@ -222,6 +232,14 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 0.651 | 0.470 | 0.546 | 0.434 |
 | tail | 516 | 1032 | 0.359 | 0.328 | 0.343 | 0.275 |
 
+### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, icd10, candidates full
+
+| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| head | 10 | 627 | 0.711 | 0.545 | 0.617 | 0.605 |
+| torso | 147 | 1979 | 0.644 | 0.356 | 0.458 | 0.359 |
+| tail | 516 | 1032 | 0.284 | 0.218 | 0.247 | 0.189 |
+
 ### openai/gpt-oss-120b, icd10, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
@@ -255,6 +273,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260813T214023Z`: dataset `3e4376d906ea`, git `a733c932f154`, provider groq
 - `icd10__llm__claude-sonnet-5__candfull__20260813T214135Z`: dataset `0b6d503e3b12`, git `a733c932f154`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candgold__20260813T214105Z`: dataset `0b6d503e3b12`, git `a733c932f154`, provider anthropic
+- `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candfull__20260813T154130Z`: dataset `0b6d503e3b12`, git `ee69a57cd02f`, provider modal only
 - `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260811T225054Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider modal only
 - `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260813T134819Z`: dataset `0b6d503e3b12`, git `0831276676e5`, provider modal only
 - `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260813T152608Z`: dataset `0b6d503e3b12`, git `e188bb34861a`, provider modal only
