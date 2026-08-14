@@ -69,7 +69,11 @@ def test_valid_and_invalid_runs_are_separated():
     rendered = reporting.render(
         [make_run("good", 0.779, 0.0), make_run("bad", 0.9, 0.5)]
     )
-    results = rendered.split("## Results")[1].split("## Quarantined")[0]
+    # To the next heading, not to `## Quarantined`. The Models key sits between
+    # the two and names every model including the quarantined ones, which is the
+    # point of a key; what must not happen is a failed run appearing in a
+    # results table, and that is what this slice covers.
+    results = rendered.split("## Results")[1].split("\n## ")[0]
     assert "model-good" in results
     # A higher score does not buy a failed run a place in the table.
     assert "model-bad" not in results
@@ -182,6 +186,38 @@ def test_deduplication_survives_a_record_with_no_start_time():
     rendered = reporting.render([small, large])
     assert "| 578 |" in rendered
     assert "| 150 |" not in rendered, "the better covered run supersedes the short one"
+
+
+# --------------------------------------------------------------------------
+# Model names: the tables are read by people, the ids are matched by machines
+
+
+def test_every_committed_model_is_named():
+    """A model with no entry in MODEL_NAMES falls through as its raw path.
+
+    That is deliberate, because inventing a label for an unknown id would be a
+    guess presented as fact. It is also ugly, and ugly output that nobody is
+    told about survives for months, so a new model on the board fails here until
+    someone writes down what it is called and how it was served.
+    """
+    missing = {
+        run["manifest"]["model_id"]
+        for run in reporting.load_runs()
+        if run["manifest"]["model_id"] not in reporting.MODEL_NAMES
+    }
+    assert not missing, f"add these to reporting.MODEL_NAMES: {sorted(missing)}"
+
+
+def test_the_exact_id_survives_the_rename():
+    """Short names are for reading. The id has to stay somewhere findable."""
+    rendered = reporting.render([make_run("clean", 0.779)])
+    assert "## Models" in rendered
+    key = rendered.split("## Models")[1].split("## ")[0]
+    assert "model-clean" in key, "an unnamed model still lists its id"
+
+
+def test_an_unnamed_model_is_not_given_an_invented_label():
+    assert reporting.display_name("some/unheard-of-model:q8") == "some/unheard-of-model:q8"
 
 
 # --------------------------------------------------------------------------

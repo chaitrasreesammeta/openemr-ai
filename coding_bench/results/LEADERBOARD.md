@@ -9,41 +9,53 @@ CI regenerates this file and fails if the committed copy differs.
 
 | Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
-| qwen/qwen3.6-27b | cpt | full | 312 | 0.843 [0.801, 0.886] | 0.525 | 0.924 | 0.570 | 0.846 | 0.0% | 4.2s |
-| claude-sonnet-5 | cpt | full | 312 | 0.812 [0.767, 0.859] | 0.479 | 0.904 | 0.503 | 0.817 | 0.0% | 2.3s |
-| openai/gpt-oss-120b | cpt | full | 312 | 0.778 [0.731, 0.821] | 0.507 | 0.851 | 0.547 | 0.724 | 0.0% | 1.5s |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | full | 312 | 0.639 [0.584, 0.690] | 0.436 | 0.678 | 0.519 | 0.526 | 0.0% | 20.9s |
+| Qwen3.6 27B | cpt | full | 312 | 0.843 [0.801, 0.886] | 0.525 | 0.924 | 0.570 | 0.846 | 0.0% | 4.2s |
+| Claude Sonnet 5 | cpt | full | 312 | 0.812 [0.767, 0.859] | 0.479 | 0.904 | 0.503 | 0.817 | 0.0% | 2.3s |
+| GPT-OSS 120B | cpt | full | 312 | 0.778 [0.731, 0.821] | 0.507 | 0.851 | 0.547 | 0.724 | 0.0% | 1.5s |
+| Muse Glimmer 30B | cpt | full | 312 | 0.639 [0.584, 0.690] | 0.436 | 0.678 | 0.519 | 0.526 | 0.0% | 20.9s |
 
 ### icd10, full candidates
 
 | Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
-| qwen/qwen3.6-27b | icd10 | full | 578 | 0.528 [0.512, 0.542] | 0.343 | 0.755 | 0.344 | 0.066 | 1.0% | 12.2s |
-| claude-sonnet-5 | icd10 | full | 578 | 0.523 [0.506, 0.538] | 0.316 | 0.748 | 0.343 | 0.073 | 0.0% | 8.3s |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | icd10 | full | 578 | 0.423 [0.401, 0.445] | 0.233 | 0.617 | 0.247 | 0.047 | 4.0% | 119.0s |
-| openai/gpt-oss-120b | icd10 | full | 578 | 0.408 [0.388, 0.428] | 0.211 | 0.618 | 0.241 | 0.054 | 0.2% | 5.5s |
+| Qwen3.6 27B | icd10 | full | 578 | 0.528 [0.512, 0.542] | 0.343 | 0.755 | 0.344 | 0.066 | 1.0% | 12.2s |
+| Claude Sonnet 5 | icd10 | full | 578 | 0.523 [0.506, 0.538] | 0.316 | 0.748 | 0.343 | 0.073 | 0.0% | 8.3s |
+| Muse Glimmer 30B | icd10 | full | 578 | 0.423 [0.401, 0.445] | 0.233 | 0.617 | 0.247 | 0.047 | 4.0% | 119.0s |
+| GPT-OSS 120B | icd10 | full | 578 | 0.408 [0.388, 0.428] | 0.211 | 0.618 | 0.241 | 0.054 | 0.2% | 5.5s |
 
 ### cpt, gold candidates
 
 | Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
-| claude-sonnet-5 | cpt | gold | 312 | 0.943 [0.923, 0.960] | 0.739 | 0.976 | 0.816 | 0.888 | 0.0% | 2.0s |
-| qwen/qwen3.6-27b | cpt | gold | 312 | 0.933 [0.911, 0.953] | 0.704 | 0.967 | 0.797 | 0.869 | 0.0% | 2.6s |
-| openai/gpt-oss-120b | cpt | gold | 312 | 0.929 [0.908, 0.949] | 0.704 | 0.963 | 0.797 | 0.862 | 0.0% | 0.8s |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | cpt | gold | 150 | 0.551 [0.468, 0.624] | 0.326 | 0.574 | 0.316 | 0.373 | 0.0% | 19.2s |
+| Claude Sonnet 5 | cpt | gold | 312 | 0.943 [0.923, 0.960] | 0.739 | 0.976 | 0.816 | 0.888 | 0.0% | 2.0s |
+| Qwen3.6 27B | cpt | gold | 312 | 0.933 [0.911, 0.953] | 0.704 | 0.967 | 0.797 | 0.869 | 0.0% | 2.6s |
+| GPT-OSS 120B | cpt | gold | 312 | 0.929 [0.908, 0.949] | 0.704 | 0.963 | 0.797 | 0.862 | 0.0% | 0.8s |
+| Muse Glimmer 30B | cpt | gold | 150 | 0.551 [0.468, 0.624] | 0.326 | 0.574 | 0.316 | 0.373 | 0.0% | 19.2s |
 
 ### icd10, gold candidates
 
 | Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
-| qwen/qwen3.6-27b | icd10 | gold | 578 | 0.815 [0.801, 0.829] | 0.571 | 0.935 | 0.682 | 0.360 | 0.3% | 6.6s |
-| claude-sonnet-5 | icd10 | gold | 578 | 0.811 [0.797, 0.825] | 0.569 | 0.925 | 0.690 | 0.317 | 0.0% | 5.2s |
-| openai/gpt-oss-120b | icd10 | gold | 578 | 0.792 [0.779, 0.805] | 0.559 | 0.918 | 0.678 | 0.260 | 0.0% | 2.5s |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | icd10 | gold | 150 | 0.706 [0.674, 0.736] | 0.510 | 0.720 | 0.662 | 0.247 | 0.0% | 96.2s |
+| Qwen3.6 27B | icd10 | gold | 578 | 0.815 [0.801, 0.829] | 0.571 | 0.935 | 0.682 | 0.360 | 0.3% | 6.6s |
+| Claude Sonnet 5 | icd10 | gold | 578 | 0.811 [0.797, 0.825] | 0.569 | 0.925 | 0.690 | 0.317 | 0.0% | 5.2s |
+| GPT-OSS 120B | icd10 | gold | 578 | 0.792 [0.779, 0.805] | 0.559 | 0.918 | 0.678 | 0.260 | 0.0% | 2.5s |
+| Muse Glimmer 30B | icd10 | gold | 150 | 0.706 [0.674, 0.736] | 0.510 | 0.720 | 0.662 | 0.247 | 0.0% | 96.2s |
 
 **Reading the candidate space.** `gold` offers only the note's correct codes, so precision is 1.000 by construction and the F1 is a recall ceiling, not a deployment estimate. `full` offers the whole catalogue and is the condition that predicts real behaviour. A number from one cannot be compared against a number from the other.
 
 **Head and tail** are frequency bands over the gold label space: the ten most frequent codes, and codes with five or fewer gold mentions. The gap between them is the long-tail collapse a single F1 hides.
+
+## Models
+
+The tables above name the model; the exact id is what reproduces it. A quantised build is not the released model and is never tabulated as though it were, so the build is named here too.
+
+| Model | Served as | Exact id |
+|---|---|---|
+| Claude Sonnet 5 | Anthropic API | `claude-sonnet-5` |
+| Gemma 4 26B-A4B | GGUF QAT UD-Q4_K_XL, self-hosted llama.cpp | `google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL` |
+| GPT-OSS 120B | Groq API | `openai/gpt-oss-120b` |
+| Muse Glimmer 30B | GGUF dynamic K-quant, self-hosted llama.cpp | `meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic` |
+| Qwen3.6 27B | Groq API | `qwen/qwen3.6-27b` |
 
 ## Quarantined runs
 
@@ -51,11 +63,11 @@ These runs exceeded the 5% failure ceiling. Failed notes score as empty predicti
 
 | Model | Task | Candidates | n | Failed | Truncated | Reported micro F1 (not valid) |
 |---|---|---|---:|---:|---:|---:|
-| google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 10.9% | 10.9% | 0.649 |
-| google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 9.9% | 9.9% | 0.654 |
-| google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 5.1% | 5.1% | 0.710 |
-| google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL | cpt | gold | 312 | 5.4% | 5.4% | 0.730 |
-| qwen/qwen3.6-27b | icd10 | full | 578 | 5.0% | 2.6% | 0.513 |
+| Gemma 4 26B-A4B | cpt | gold | 312 | 10.9% | 10.9% | 0.649 |
+| Gemma 4 26B-A4B | cpt | gold | 312 | 9.9% | 9.9% | 0.654 |
+| Gemma 4 26B-A4B | cpt | gold | 312 | 5.1% | 5.1% | 0.710 |
+| Gemma 4 26B-A4B | cpt | gold | 312 | 5.4% | 5.4% | 0.730 |
+| Qwen3.6 27B | icd10 | full | 578 | 5.0% | 2.6% | 0.513 |
 
 ## Head to head
 
@@ -63,82 +75,82 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 
 | A | B | Candidates | n | Statistic | Delta (A - B) | 95% CI | Real? |
 |---|---|---|---:|---|---:|---|---|
-| claude-sonnet-5 | qwen/qwen3.6-27b | gold | 312 | micro_f1 | +0.0104 | [-0.0017, +0.0218] | no |
-| claude-sonnet-5 | qwen/qwen3.6-27b | gold | 312 | macro_f1 | +0.0354 | [-0.0067, +0.0742] | no |
-| claude-sonnet-5 | qwen/qwen3.6-27b | gold | 312 | exact_match | +0.0192 | [-0.0032, +0.0417] | no |
-| claude-sonnet-5 | openai/gpt-oss-120b | gold | 312 | micro_f1 | +0.0139 | [+0.0000, +0.0290] | no |
-| claude-sonnet-5 | openai/gpt-oss-120b | gold | 312 | macro_f1 | +0.0353 | [-0.0174, +0.0753] | no |
-| claude-sonnet-5 | openai/gpt-oss-120b | gold | 312 | exact_match | +0.0256 | [+0.0000, +0.0545] | no |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.3906 | [+0.3160, +0.4727] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.4279 | [+0.3065, +0.5079] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.5133 | [+0.4267, +0.5933] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | micro_f1 | +0.0035 | [-0.0128, +0.0193] | no |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | macro_f1 | -0.0001 | [-0.0618, +0.0508] | no |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 312 | exact_match | +0.0064 | [-0.0224, +0.0353] | no |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.3759 | [+0.3018, +0.4610] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.3921 | [+0.2628, +0.4803] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.4867 | [+0.4000, +0.5733] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.3833 | [+0.3062, +0.4655] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.4164 | [+0.2738, +0.4962] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.5000 | [+0.4133, +0.5800] | **yes** |
-| qwen/qwen3.6-27b | claude-sonnet-5 | full | 312 | micro_f1 | +0.0313 | [+0.0106, +0.0543] | **yes** |
-| qwen/qwen3.6-27b | claude-sonnet-5 | full | 312 | macro_f1 | +0.0460 | [-0.0005, +0.1105] | no |
-| qwen/qwen3.6-27b | claude-sonnet-5 | full | 312 | exact_match | +0.0288 | [+0.0064, +0.0514] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | micro_f1 | +0.0651 | [+0.0358, +0.0954] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | macro_f1 | +0.0182 | [-0.0227, +0.0695] | no |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 312 | exact_match | +0.1218 | [+0.0833, +0.1635] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | micro_f1 | +0.2048 | [+0.1609, +0.2534] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | macro_f1 | +0.0893 | [+0.0396, +0.1470] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | exact_match | +0.3205 | [+0.2692, +0.3782] | **yes** |
-| qwen/qwen3.6-27b | claude-sonnet-5 | gold | 578 | micro_f1 | +0.0038 | [-0.0072, +0.0153] | no |
-| qwen/qwen3.6-27b | claude-sonnet-5 | gold | 578 | macro_f1 | +0.0015 | [-0.0166, +0.0193] | no |
-| qwen/qwen3.6-27b | claude-sonnet-5 | gold | 578 | exact_match | +0.0433 | [+0.0173, +0.0692] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | micro_f1 | +0.0227 | [+0.0116, +0.0328] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | macro_f1 | +0.0119 | [-0.0041, +0.0367] | no |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | gold | 578 | exact_match | +0.1003 | [+0.0709, +0.1263] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0674 | [+0.0386, +0.0952] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0668 | [+0.0319, +0.0987] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.1200 | [+0.0667, +0.1800] | **yes** |
-| claude-sonnet-5 | openai/gpt-oss-120b | full | 312 | micro_f1 | +0.0338 | [+0.0013, +0.0658] | **yes** |
-| claude-sonnet-5 | openai/gpt-oss-120b | full | 312 | macro_f1 | -0.0278 | [-0.0921, +0.0327] | no |
-| claude-sonnet-5 | openai/gpt-oss-120b | full | 312 | exact_match | +0.0929 | [+0.0513, +0.1346] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | micro_f1 | +0.1736 | [+0.1262, +0.2234] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | macro_f1 | +0.0433 | [-0.0394, +0.1215] | no |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | exact_match | +0.2917 | [+0.2340, +0.3494] | **yes** |
-| claude-sonnet-5 | openai/gpt-oss-120b | gold | 578 | micro_f1 | +0.0189 | [+0.0083, +0.0289] | **yes** |
-| claude-sonnet-5 | openai/gpt-oss-120b | gold | 578 | macro_f1 | +0.0104 | [-0.0030, +0.0347] | no |
-| claude-sonnet-5 | openai/gpt-oss-120b | gold | 578 | exact_match | +0.0571 | [+0.0294, +0.0848] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0591 | [+0.0349, +0.0839] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0554 | [+0.0293, +0.0826] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.0533 | [+0.0133, +0.0933] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | micro_f1 | +0.0542 | [+0.0273, +0.0805] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | macro_f1 | +0.0518 | [+0.0185, +0.0814] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | gold | 150 | exact_match | +0.0533 | [+0.0000, +0.1133] | no |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | micro_f1 | +0.1398 | [+0.0970, +0.1856] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | macro_f1 | +0.0711 | [+0.0036, +0.1310] | **yes** |
-| openai/gpt-oss-120b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 312 | exact_match | +0.1987 | [+0.1506, +0.2532] | **yes** |
-| qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | micro_f1 | +0.0054 | [-0.0099, +0.0179] | no |
-| qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | macro_f1 | +0.0265 | [+0.0099, +0.0416] | **yes** |
-| qwen/qwen3.6-27b | claude-sonnet-5 | full | 578 | exact_match | -0.0069 | [-0.0277, +0.0138] | no |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | micro_f1 | +0.1047 | [+0.0830, +0.1283] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | macro_f1 | +0.1100 | [+0.0882, +0.1352] | **yes** |
-| qwen/qwen3.6-27b | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | exact_match | +0.0190 | [-0.0017, +0.0398] | no |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | micro_f1 | +0.1203 | [+0.1020, +0.1399] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | macro_f1 | +0.1316 | [+0.1143, +0.1560] | **yes** |
-| qwen/qwen3.6-27b | openai/gpt-oss-120b | full | 578 | exact_match | +0.0121 | [-0.0070, +0.0294] | no |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | micro_f1 | +0.0993 | [+0.0771, +0.1230] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | macro_f1 | +0.0836 | [+0.0654, +0.1073] | **yes** |
-| claude-sonnet-5 | meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | full | 578 | exact_match | +0.0260 | [+0.0035, +0.0484] | **yes** |
-| claude-sonnet-5 | openai/gpt-oss-120b | full | 578 | micro_f1 | +0.1149 | [+0.0984, +0.1315] | **yes** |
-| claude-sonnet-5 | openai/gpt-oss-120b | full | 578 | macro_f1 | +0.1052 | [+0.0921, +0.1280] | **yes** |
-| claude-sonnet-5 | openai/gpt-oss-120b | full | 578 | exact_match | +0.0190 | [+0.0035, +0.0346] | **yes** |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | openai/gpt-oss-120b | full | 578 | micro_f1 | +0.0156 | [-0.0090, +0.0398] | no |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | openai/gpt-oss-120b | full | 578 | macro_f1 | +0.0216 | [-0.0018, +0.0464] | no |
-| meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic | openai/gpt-oss-120b | full | 578 | exact_match | -0.0069 | [-0.0260, +0.0121] | no |
+| Claude Sonnet 5 | Qwen3.6 27B | gold | 312 | micro_f1 | +0.0104 | [-0.0017, +0.0218] | no |
+| Claude Sonnet 5 | Qwen3.6 27B | gold | 312 | macro_f1 | +0.0354 | [-0.0067, +0.0742] | no |
+| Claude Sonnet 5 | Qwen3.6 27B | gold | 312 | exact_match | +0.0192 | [-0.0032, +0.0417] | no |
+| Claude Sonnet 5 | GPT-OSS 120B | gold | 312 | micro_f1 | +0.0139 | [+0.0000, +0.0290] | no |
+| Claude Sonnet 5 | GPT-OSS 120B | gold | 312 | macro_f1 | +0.0353 | [-0.0174, +0.0753] | no |
+| Claude Sonnet 5 | GPT-OSS 120B | gold | 312 | exact_match | +0.0256 | [+0.0000, +0.0545] | no |
+| Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.3906 | [+0.3160, +0.4727] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.4279 | [+0.3065, +0.5079] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | exact_match | +0.5133 | [+0.4267, +0.5933] | **yes** |
+| Qwen3.6 27B | GPT-OSS 120B | gold | 312 | micro_f1 | +0.0035 | [-0.0128, +0.0193] | no |
+| Qwen3.6 27B | GPT-OSS 120B | gold | 312 | macro_f1 | -0.0001 | [-0.0618, +0.0508] | no |
+| Qwen3.6 27B | GPT-OSS 120B | gold | 312 | exact_match | +0.0064 | [-0.0224, +0.0353] | no |
+| Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.3759 | [+0.3018, +0.4610] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.3921 | [+0.2628, +0.4803] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | exact_match | +0.4867 | [+0.4000, +0.5733] | **yes** |
+| GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.3833 | [+0.3062, +0.4655] | **yes** |
+| GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.4164 | [+0.2738, +0.4962] | **yes** |
+| GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | exact_match | +0.5000 | [+0.4133, +0.5800] | **yes** |
+| Qwen3.6 27B | Claude Sonnet 5 | full | 312 | micro_f1 | +0.0313 | [+0.0106, +0.0543] | **yes** |
+| Qwen3.6 27B | Claude Sonnet 5 | full | 312 | macro_f1 | +0.0460 | [-0.0005, +0.1105] | no |
+| Qwen3.6 27B | Claude Sonnet 5 | full | 312 | exact_match | +0.0288 | [+0.0064, +0.0514] | **yes** |
+| Qwen3.6 27B | GPT-OSS 120B | full | 312 | micro_f1 | +0.0651 | [+0.0358, +0.0954] | **yes** |
+| Qwen3.6 27B | GPT-OSS 120B | full | 312 | macro_f1 | +0.0182 | [-0.0227, +0.0695] | no |
+| Qwen3.6 27B | GPT-OSS 120B | full | 312 | exact_match | +0.1218 | [+0.0833, +0.1635] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | full | 312 | micro_f1 | +0.2048 | [+0.1609, +0.2534] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | full | 312 | macro_f1 | +0.0893 | [+0.0396, +0.1470] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | full | 312 | exact_match | +0.3205 | [+0.2692, +0.3782] | **yes** |
+| Qwen3.6 27B | Claude Sonnet 5 | gold | 578 | micro_f1 | +0.0038 | [-0.0072, +0.0153] | no |
+| Qwen3.6 27B | Claude Sonnet 5 | gold | 578 | macro_f1 | +0.0015 | [-0.0166, +0.0193] | no |
+| Qwen3.6 27B | Claude Sonnet 5 | gold | 578 | exact_match | +0.0433 | [+0.0173, +0.0692] | **yes** |
+| Qwen3.6 27B | GPT-OSS 120B | gold | 578 | micro_f1 | +0.0227 | [+0.0116, +0.0328] | **yes** |
+| Qwen3.6 27B | GPT-OSS 120B | gold | 578 | macro_f1 | +0.0119 | [-0.0041, +0.0367] | no |
+| Qwen3.6 27B | GPT-OSS 120B | gold | 578 | exact_match | +0.1003 | [+0.0709, +0.1263] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.0674 | [+0.0386, +0.0952] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.0668 | [+0.0319, +0.0987] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | exact_match | +0.1200 | [+0.0667, +0.1800] | **yes** |
+| Claude Sonnet 5 | GPT-OSS 120B | full | 312 | micro_f1 | +0.0338 | [+0.0013, +0.0658] | **yes** |
+| Claude Sonnet 5 | GPT-OSS 120B | full | 312 | macro_f1 | -0.0278 | [-0.0921, +0.0327] | no |
+| Claude Sonnet 5 | GPT-OSS 120B | full | 312 | exact_match | +0.0929 | [+0.0513, +0.1346] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | full | 312 | micro_f1 | +0.1736 | [+0.1262, +0.2234] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | full | 312 | macro_f1 | +0.0433 | [-0.0394, +0.1215] | no |
+| Claude Sonnet 5 | Muse Glimmer 30B | full | 312 | exact_match | +0.2917 | [+0.2340, +0.3494] | **yes** |
+| Claude Sonnet 5 | GPT-OSS 120B | gold | 578 | micro_f1 | +0.0189 | [+0.0083, +0.0289] | **yes** |
+| Claude Sonnet 5 | GPT-OSS 120B | gold | 578 | macro_f1 | +0.0104 | [-0.0030, +0.0347] | no |
+| Claude Sonnet 5 | GPT-OSS 120B | gold | 578 | exact_match | +0.0571 | [+0.0294, +0.0848] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.0591 | [+0.0349, +0.0839] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.0554 | [+0.0293, +0.0826] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | exact_match | +0.0533 | [+0.0133, +0.0933] | **yes** |
+| GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.0542 | [+0.0273, +0.0805] | **yes** |
+| GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.0518 | [+0.0185, +0.0814] | **yes** |
+| GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | exact_match | +0.0533 | [+0.0000, +0.1133] | no |
+| GPT-OSS 120B | Muse Glimmer 30B | full | 312 | micro_f1 | +0.1398 | [+0.0970, +0.1856] | **yes** |
+| GPT-OSS 120B | Muse Glimmer 30B | full | 312 | macro_f1 | +0.0711 | [+0.0036, +0.1310] | **yes** |
+| GPT-OSS 120B | Muse Glimmer 30B | full | 312 | exact_match | +0.1987 | [+0.1506, +0.2532] | **yes** |
+| Qwen3.6 27B | Claude Sonnet 5 | full | 578 | micro_f1 | +0.0054 | [-0.0099, +0.0179] | no |
+| Qwen3.6 27B | Claude Sonnet 5 | full | 578 | macro_f1 | +0.0265 | [+0.0099, +0.0416] | **yes** |
+| Qwen3.6 27B | Claude Sonnet 5 | full | 578 | exact_match | -0.0069 | [-0.0277, +0.0138] | no |
+| Qwen3.6 27B | Muse Glimmer 30B | full | 578 | micro_f1 | +0.1047 | [+0.0830, +0.1283] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | full | 578 | macro_f1 | +0.1100 | [+0.0882, +0.1352] | **yes** |
+| Qwen3.6 27B | Muse Glimmer 30B | full | 578 | exact_match | +0.0190 | [-0.0017, +0.0398] | no |
+| Qwen3.6 27B | GPT-OSS 120B | full | 578 | micro_f1 | +0.1203 | [+0.1020, +0.1399] | **yes** |
+| Qwen3.6 27B | GPT-OSS 120B | full | 578 | macro_f1 | +0.1316 | [+0.1143, +0.1560] | **yes** |
+| Qwen3.6 27B | GPT-OSS 120B | full | 578 | exact_match | +0.0121 | [-0.0070, +0.0294] | no |
+| Claude Sonnet 5 | Muse Glimmer 30B | full | 578 | micro_f1 | +0.0993 | [+0.0771, +0.1230] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | full | 578 | macro_f1 | +0.0836 | [+0.0654, +0.1073] | **yes** |
+| Claude Sonnet 5 | Muse Glimmer 30B | full | 578 | exact_match | +0.0260 | [+0.0035, +0.0484] | **yes** |
+| Claude Sonnet 5 | GPT-OSS 120B | full | 578 | micro_f1 | +0.1149 | [+0.0984, +0.1315] | **yes** |
+| Claude Sonnet 5 | GPT-OSS 120B | full | 578 | macro_f1 | +0.1052 | [+0.0921, +0.1280] | **yes** |
+| Claude Sonnet 5 | GPT-OSS 120B | full | 578 | exact_match | +0.0190 | [+0.0035, +0.0346] | **yes** |
+| Muse Glimmer 30B | GPT-OSS 120B | full | 578 | micro_f1 | +0.0156 | [-0.0090, +0.0398] | no |
+| Muse Glimmer 30B | GPT-OSS 120B | full | 578 | macro_f1 | +0.0216 | [-0.0018, +0.0464] | no |
+| Muse Glimmer 30B | GPT-OSS 120B | full | 578 | exact_match | -0.0069 | [-0.0260, +0.0121] | no |
 
 ## Frequency bands
 
-### claude-sonnet-5, cpt, candidates gold
+### Claude Sonnet 5, cpt, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -146,7 +158,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 51 | 74 | 1.000 | 0.689 | 0.816 | 0.703 |
 
-### qwen/qwen3.6-27b, cpt, candidates gold
+### Qwen3.6 27B, cpt, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -154,7 +166,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 51 | 74 | 1.000 | 0.662 | 0.797 | 0.671 |
 
-### openai/gpt-oss-120b, cpt, candidates gold
+### GPT-OSS 120B, cpt, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -162,7 +174,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 51 | 74 | 1.000 | 0.662 | 0.797 | 0.664 |
 
-### qwen/qwen3.6-27b, cpt, candidates full
+### Qwen3.6 27B, cpt, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -170,7 +182,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 51 | 74 | 0.558 | 0.581 | 0.570 | 0.478 |
 
-### qwen/qwen3.6-27b, icd10, candidates gold
+### Qwen3.6 27B, icd10, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -178,7 +190,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 1.000 | 0.718 | 0.836 | 0.721 |
 | tail | 516 | 1032 | 1.000 | 0.517 | 0.682 | 0.521 |
 
-### claude-sonnet-5, cpt, candidates full
+### Claude Sonnet 5, cpt, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -186,7 +198,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 51 | 74 | 0.494 | 0.514 | 0.503 | 0.432 |
 
-### claude-sonnet-5, icd10, candidates gold
+### Claude Sonnet 5, icd10, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -194,7 +206,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 1.000 | 0.707 | 0.829 | 0.713 |
 | tail | 516 | 1032 | 1.000 | 0.526 | 0.690 | 0.522 |
 
-### openai/gpt-oss-120b, icd10, candidates gold
+### GPT-OSS 120B, icd10, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -202,7 +214,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 1.000 | 0.670 | 0.802 | 0.678 |
 | tail | 516 | 1032 | 1.000 | 0.513 | 0.678 | 0.518 |
 
-### openai/gpt-oss-120b, cpt, candidates full
+### GPT-OSS 120B, cpt, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -210,7 +222,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 51 | 74 | 0.539 | 0.554 | 0.547 | 0.463 |
 
-### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, icd10, candidates gold
+### Muse Glimmer 30B, icd10, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -218,7 +230,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 35 | 261 | 1.000 | 0.682 | 0.811 | 0.742 |
 | tail | 490 | 766 | 1.000 | 0.495 | 0.662 | 0.489 |
 
-### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, cpt, candidates full
+### Muse Glimmer 30B, cpt, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -226,7 +238,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 51 | 74 | 0.574 | 0.473 | 0.519 | 0.388 |
 
-### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, cpt, candidates gold
+### Muse Glimmer 30B, cpt, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -234,7 +246,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 13 | 16 | 1.000 | 0.188 | 0.316 | 0.231 |
 
-### qwen/qwen3.6-27b, icd10, candidates full
+### Qwen3.6 27B, icd10, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -242,7 +254,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 0.590 | 0.529 | 0.558 | 0.454 |
 | tail | 516 | 1032 | 0.321 | 0.371 | 0.344 | 0.303 |
 
-### claude-sonnet-5, icd10, candidates full
+### Claude Sonnet 5, icd10, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -250,7 +262,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 0.651 | 0.470 | 0.546 | 0.434 |
 | tail | 516 | 1032 | 0.359 | 0.328 | 0.343 | 0.275 |
 
-### meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic, icd10, candidates full
+### Muse Glimmer 30B, icd10, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -258,7 +270,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 0.644 | 0.356 | 0.458 | 0.359 |
 | tail | 516 | 1032 | 0.284 | 0.218 | 0.247 | 0.189 |
 
-### openai/gpt-oss-120b, icd10, candidates full
+### GPT-OSS 120B, icd10, candidates full
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
 |---|---:|---:|---:|---:|---:|---:|

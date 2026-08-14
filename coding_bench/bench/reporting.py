@@ -27,6 +27,78 @@ from coding_bench.bench.runner import ERROR_RATE_INVALIDATES, RESULTS_DIR, RUNS_
 
 LEADERBOARD = RESULTS_DIR / "LEADERBOARD.md"
 
+# What each model is called in a table cell, and how it was served.
+#
+# The manifest carries the exact model id, and it has to: it is what a rerun
+# must match character for character, and it is the key the board groups on.
+# It is also unreadable at a glance.
+# `meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic` is forty eight characters
+# of repository path to say "Muse Glimmer 30B", and it sets the width of the
+# first column in every table, which pushes the scores it should be introducing
+# off to the right. So the tables carry the short name and the `## Models` key
+# carries the id: readable at the top, exact underneath.
+#
+# The serving string is the second half of the answer and belongs next to the
+# id rather than in every row. A quantised build is not the released model, a
+# point the gemma adapter makes at length, and it is also most of why one row
+# reports 119 seconds a note and another reports 5.
+#
+# The map is explicit rather than parsed out of the path, because a parser has
+# to guess which trailing segment is a size, which is a quantisation and which
+# is an organisation, and it guesses wrong the first time a vendor names
+# something differently. An unmapped id falls through verbatim, so a new model
+# appears as its raw path; `test_every_committed_model_is_named` turns that into
+# a failed check rather than something nobody notices.
+MODEL_NAMES: dict[str, tuple[str, str]] = {
+    "claude-sonnet-5": ("Claude Sonnet 5", "Anthropic API"),
+    "google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL": (
+        "Gemma 4 26B-A4B",
+        "GGUF QAT UD-Q4_K_XL, self-hosted llama.cpp",
+    ),
+    "meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic": (
+        "Muse Glimmer 30B",
+        "GGUF dynamic K-quant, self-hosted llama.cpp",
+    ),
+    "openai/gpt-oss-120b": ("GPT-OSS 120B", "Groq API"),
+    "qwen/qwen3.6-27b": ("Qwen3.6 27B", "Groq API"),
+}
+
+
+def display_name(model_id: str) -> str:
+    """The table label for a model id, or the id itself if it has no entry."""
+    return MODEL_NAMES.get(model_id, (model_id, ""))[0]
+
+
+def _models_section(runs: list[dict]) -> list[str]:
+    """The key from short name back to the exact id, for every model shown.
+
+    Every model in `runs`, not just the tabulated ones: a quarantined run names
+    its model too, and a reader who meets `Gemma 4 26B-A4B` under Quarantined
+    has the same question as one who meets a name in Results.
+    """
+    seen = {run["manifest"]["model_id"] for run in runs}
+    if not seen:
+        return []
+
+    lines = [
+        "## Models",
+        "",
+        "The tables above name the model; the exact id is what reproduces it. A "
+        "quantised build is not the released model and is never tabulated as "
+        "though it were, so the build is named here too.",
+        "",
+        "| Model | Served as | Exact id |",
+        "|---|---|---|",
+    ]
+    rows = [(display_name(model_id), MODEL_NAMES.get(model_id, (model_id, "n/a"))[1], model_id)
+            for model_id in seen]
+    # Case insensitive, or `GPT-OSS` sorts above `Gemma` on the capital and the
+    # list stops looking alphabetical to anyone reading it.
+    for name, served, model_id in sorted(rows, key=lambda row: (row[0].lower(), row[2])):
+        lines.append(f"| {name} | {served} | `{model_id}` |")
+    lines.append("")
+    return lines
+
 
 def load_runs(runs_dir: Path | None = None) -> list[dict]:
     runs_dir = runs_dir or RUNS_DIR
@@ -49,7 +121,7 @@ def _row(run: dict) -> str:
     low, high = metrics["uncertainty"]["micro_f1_ci95"]
     bands = metrics["bands"]
     return (
-        f"| {manifest['model_id']} "
+        f"| {display_name(manifest['model_id'])} "
         f"| {manifest['task']} "
         f"| {manifest['candidate_space']} "
         f"| {manifest['n_notes']} "
@@ -133,7 +205,8 @@ def _paired_section(valid: list[dict]) -> list[str]:
         for statistic in ("micro_f1", "macro_f1", "exact_match"):
             outcome = m.paired_bootstrap(rows_a, rows_b, statistic=statistic)
             lines.append(
-                f"| {a['manifest']['model_id']} | {b['manifest']['model_id']} "
+                f"| {display_name(a['manifest']['model_id'])} "
+                f"| {display_name(b['manifest']['model_id'])} "
                 f"| {a['manifest']['candidate_space']} | {len(shared)} | {statistic} "
                 f"| {outcome['delta']:+.4f} "
                 f"| [{outcome['ci_low']:+.4f}, {outcome['ci_high']:+.4f}] "
@@ -233,6 +306,12 @@ def render(runs: list[dict]) -> str:
     else:
         lines += ["## Results", "", "_No valid runs yet._", ""]
 
+    # After Results and before Quarantined, so it sits between the two places a
+    # short name is met. It also closes the Results section, which the CI
+    # summary reads by slicing to the next `## `; that slice used to end at
+    # Quarantined and now ends here, with the same rows inside it.
+    lines += _models_section(runs)
+
     if invalid:
         lines += [
             "## Quarantined runs",
@@ -248,7 +327,8 @@ def render(runs: list[dict]) -> str:
         for run in invalid:
             manifest, ops = run["manifest"], run["metrics"]["operational"]
             lines.append(
-                f"| {manifest['model_id']} | {manifest['task']} | {manifest['candidate_space']} "
+                f"| {display_name(manifest['model_id'])} | {manifest['task']} "
+                f"| {manifest['candidate_space']} "
                 f"| {manifest['n_notes']} | {ops['error_rate']:.1%} | {ops['truncation_rate']:.1%} "
                 f"| {run['metrics']['core']['micro_f1']:.3f} |"
             )
@@ -261,7 +341,8 @@ def render(runs: list[dict]) -> str:
         for run in valid:
             manifest = run["manifest"]
             lines += [
-                f"### {manifest['model_id']}, {manifest['task']}, candidates {manifest['candidate_space']}",
+                f"### {display_name(manifest['model_id'])}, {manifest['task']}, "
+                f"candidates {manifest['candidate_space']}",
                 "",
                 "| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |",
                 "|---|---:|---:|---:|---:|---:|---:|",
