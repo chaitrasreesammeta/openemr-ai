@@ -299,66 +299,49 @@ def test_anthropic_is_recorded_as_a_second_external_provider():
 # error is detectable.
 
 
-def test_both_qwen38_arms_are_registered_and_self_hosted():
+def test_qwen38_is_registered_and_self_hosted():
     assert ADAPTER_FILES["qwen3.8-27b-fp8"] == "modal_qwen38_vllm.py"
-    assert ADAPTER_FILES["qwen3.8-27b-bf16"] == "modal_qwen38_vllm.py"
-    # Neither arm may claim an outside provider saw the note text. Both run on
-    # our own GPU, which is the point of having them.
-    assert {"qwen3.8-27b-fp8", "qwen3.8-27b-bf16"} <= LOCAL_MODELS
+    # It may not claim an outside provider saw the note text. It runs on our own
+    # GPU, which is the point of having it.
+    assert "qwen3.8-27b-fp8" in LOCAL_MODELS
     assert EXTERNAL_PROVIDERS.get("qwen3.8-27b-fp8") is None
-    assert EXTERNAL_PROVIDERS.get("qwen3.8-27b-bf16") is None
 
 
-def test_the_arms_name_the_exact_released_checkpoints():
-    """The manifest id has to be something a reader can fetch and rerun."""
-    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+def test_only_the_fp8_build_is_reachable():
+    """Qwen publishes bf16 weights too, and this package does not serve them.
 
-    assert qwen38.FP8_CHECKPOINT == "Qwen/Qwen3.8-27B-FP8"
-    assert qwen38.BF16_CHECKPOINT == "Qwen/Qwen3.8-27B"
-    # The FP8 repo carries its precision in its own name, so unlike the GGUF
-    # builds neither arm needs a `:quantisation` tag bolted on to stay honest.
-    assert qwen38.ARMS["fp8"][0] == qwen38.FP8_CHECKPOINT
-    assert qwen38.ARMS["bf16"][0] == qwen38.BF16_CHECKPOINT
-
-
-def test_the_two_arms_differ_only_in_the_checkpoint():
-    """The bf16 arm is unqueued, not unmaintained.
-
-    It is kept so that what FP8 costs is a chain step away rather than a
-    rewrite, and that is only true while the two arms are otherwise identical.
-    A serving flag that reaches one and not the other produces a number that
-    looks exactly like a precision effect. The two likeliest are
-    `--kv-cache-dtype`, which vLLM's own recipe for this model suggests setting
-    to fp8 and which would then quantise the cache on one side only, and
-    `--max-num-seqs`, which somebody will eventually raise on the FP8 arm
-    because it has the spare VRAM, changing its batch composition and with it
-    its greedy output.
+    Removed rather than registered and left unqueued, so there is no path by
+    which a bf16 number reaches the board without somebody rewriting the adapter
+    and re-reading the argument for why FP8 is the build that gets a row.
     """
     from coding_bench.adapters import modal_qwen38_vllm as qwen38
 
-    bf16 = qwen38.server_command(qwen38.BF16_CHECKPOINT)
-    fp8 = qwen38.server_command(qwen38.FP8_CHECKPOINT)
+    assert qwen38.CHECKPOINT == "Qwen/Qwen3.8-27B-FP8"
+    assert not hasattr(qwen38, "BF16_CHECKPOINT")
+    assert not hasattr(qwen38, "Qwen38BF16")
+    assert qwen38.Qwen38Client.model_id == qwen38.CHECKPOINT
+    # No bf16 model id survives in the registry either.
+    assert not [model for model in ADAPTER_FILES if model.endswith("bf16")]
 
-    assert len(bf16) == len(fp8), "the arms build different length argument lists"
-    differing = [(a, b) for a, b in zip(bf16, fp8) if a != b]
-    assert differing == [
-        (qwen38.BF16_CHECKPOINT, qwen38.FP8_CHECKPOINT),
-        (qwen38.BF16_CHECKPOINT, qwen38.FP8_CHECKPOINT),
-    ], f"the arms differ in more than the checkpoint: {differing}"
+    # The served checkpoint appears in the argv exactly where the id says it is.
+    command = qwen38.server_command()
+    assert command[:3] == ["vllm", "serve", qwen38.CHECKPOINT]
+    assert command[command.index("--served-model-name") + 1] == qwen38.CHECKPOINT
 
 
 def test_the_kv_cache_is_not_quantised():
-    """Named separately because it is the confound most likely to be introduced.
+    """The id on this row says fp8 weights, and only weights.
 
-    The failure is not that an fp8 KV cache is wrong. It is a perfectly good
-    third arm. It is that switching it on for one arm attributes the sum of two
-    effects to one of them.
+    vLLM's own recipe for this model passes `--kv-cache-dtype fp8`, so this is
+    the flag most likely to be switched on by somebody copying it. Doing that
+    would make the row a build Qwen never published, quantised in a second place
+    that nothing here has measured, still labelled with the released id.
     """
     from coding_bench.adapters import modal_qwen38_vllm as qwen38
 
     args = qwen38.SERVER_ARGS
     assert args[args.index("--kv-cache-dtype") + 1] == "auto"
-    assert "--model" not in args, "the checkpoint must come from the arm, not the shared args"
+    assert "--model" not in args, "the checkpoint belongs to server_command, not the shared args"
 
 
 def test_the_vllm_and_transformers_pins_are_mutually_satisfiable():
@@ -392,10 +375,55 @@ def test_the_vllm_and_transformers_pins_are_mutually_satisfiable():
 
 
 def test_note_text_cannot_reach_the_server_log():
-    """Tier 2 text stays inside Modal, and a log is outside enough to matter."""
+    """Tier 2 text stays inside Modal, and a log is outside enough to matter.
+
+    The flag is asserted by its current name. `--disable-log-requests` is what
+    older vLLM called this, it is gone in 0.27.1, and passing it made `vllm
+    serve` exit at argument parsing and crash-loop a GPU container for 22
+    minutes. Its replacement is `--enable-log-requests`, defaulting to false,
+    and the negation is passed rather than the default relied on, because
+    whether restricted notes are logged should be stated by the command.
+    """
     from coding_bench.adapters import modal_qwen38_vllm as qwen38
 
-    assert "--disable-log-requests" in qwen38.SERVER_ARGS
+    assert "--no-enable-log-requests" in qwen38.SERVER_ARGS
+    assert "--disable-log-requests" not in qwen38.SERVER_ARGS, "removed in vLLM 0.27.1"
+    # And never the bare form, which would turn logging on.
+    assert "--enable-log-requests" not in qwen38.SERVER_ARGS
+
+
+def test_the_weights_are_fetched_before_the_server_launches():
+    """So an interrupted start keeps what it already pulled.
+
+    There was briefly a `_check_flags` in front of this that asked `vllm serve
+    --help` whether every flag was accepted. It could not parse the help output,
+    concluded that vLLM rejects `--max-model-len`, `--host` and `--port`, and
+    crash-looped a correct configuration for an hour. Detection was never the
+    gap: a bad flag makes the server exit at argument parsing and `_await_ready`
+    raises within seconds with the reason. The bound on Modal's restarts belongs
+    in the caller, and it is the smoke step's `timeout-minutes`.
+    """
+    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+
+    source = Path(qwen38.__file__).read_text(encoding="utf8")
+    body = source.split("def start_server(self):")[1].split("    def ")[0]
+    assert body.index("_fetch_weights") < body.index("Popen")
+    assert "_check_flags" not in body, "the flag preflight blocked a working config"
+
+
+def test_the_weights_are_committed_to_the_volume():
+    """A Modal volume keeps nothing until something commits it.
+
+    Letting vLLM download implicitly looks equivalent and is not: a start that
+    is interrupted takes the whole 27 GB with it and the next one pays again.
+    Both llama.cpp adapters in this package already download and commit, and
+    this one was the outlier.
+    """
+    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+
+    source = Path(qwen38.__file__).read_text(encoding="utf8")
+    assert "snapshot_download(" in source
+    assert "model_cache.commit()" in source
 
 
 def test_thinking_rides_on_the_recorded_run_parameter():
@@ -435,13 +463,56 @@ def test_the_chain_thinks_because_the_model_it_is_compared_against_thinks():
         assert thinking_enabled(step.get("reasoning_strength", chain.DEFAULTS["reasoning_strength"]))
 
 
+def test_the_chain_asks_for_exactly_as_many_notes_as_the_server_has_slots():
+    """A mismatch here is silent, which is what makes it worth a test.
+
+    Ask for more than the server has slots and the surplus queues at the door
+    instead of widening the batch, so latency per note climbs for no throughput.
+    Ask for fewer and slots sit idle. Either way the run completes and every
+    accuracy column is correct, and only the latency column is quietly wrong.
+    """
+    from coding_bench.adapters.modal_qwen38_vllm import MAX_NUM_SEQS
+    from coding_bench import run_chain_qwen38 as chain
+
+    assert chain.CONCURRENCY == MAX_NUM_SEQS
+    assert chain.DEFAULTS["concurrency"] == MAX_NUM_SEQS
+
+
+def test_the_slot_count_leaves_room_for_the_weights_and_then_some():
+    """The batch width is the one setting not held to what the other rows used.
+
+    KV here is 64 KB a token: only 16 of the 64 layers hold a cache, at 4 KV
+    heads by 256 dims, because the other 48 are Gated DeltaNet with constant
+    state. Slots times context times that is the cache, and it has to sit beside
+    27 GB of fp8 weights inside the 0.90 of a 96 GB card vLLM will use.
+
+    The headroom left over is not slack. Prefill activations at a 19,130 token
+    prompt, the vision tower and cuda graph capture all come out of it, and none
+    of them appear in this arithmetic. The assertion is that the two terms it
+    can compute leave a real margin, so raising the slot count has to be a
+    decision rather than an edit to a comment.
+    """
+    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+
+    kv_bytes_per_token = 2 * 4 * 256 * 2 * 16
+    kv_gb = qwen38.MAX_NUM_SEQS * qwen38.MAX_MODEL_LEN * kv_bytes_per_token / 1e9
+    weights_gb = 27
+    usable_gb = 96 * qwen38.GPU_MEMORY_UTILISATION
+
+    assert kv_gb + weights_gb < usable_gb * 0.85, (
+        f"{qwen38.MAX_NUM_SEQS} slots is {kv_gb:.0f}GB of KV, which with the weights "
+        f"is {kv_gb + weights_gb:.0f}GB of {usable_gb:.0f}GB usable and leaves too "
+        f"little for prefill activations and graph capture"
+    )
+
+
 def test_the_chain_runs_the_fp8_build_on_every_condition_the_board_compares_on():
     """Four conditions, because a partial row cannot be ranked against a full one.
 
-    And FP8 only. The bf16 arm is registered for the ablation and is not the
-    build that gets a row: every self hosted row on the board is a deployment
-    build, `full` is the deployment condition, and no hosted provider here
-    publishes the precision a bf16 row would supposedly be matching.
+    And the FP8 build, which is the only one this package serves: every self
+    hosted row on the board is a deployment build, `full` is the deployment
+    condition, and no hosted provider here publishes the precision a bf16 row
+    would supposedly be matching.
     """
     from coding_bench import run_chain_qwen38 as chain
 
@@ -474,13 +545,11 @@ def test_the_watch_catches_the_builtin_timeout_and_not_modals():
     assert "from modal.exception import TimeoutError" not in source
 
 
-def build_qwen38_client(arm: str = "fp8", reasoning_strength: str = "medium", **response):
+def build_qwen38_client(reasoning_strength: str = "medium", **response):
     """A client wired to a stub, without constructing a Modal handle."""
-    from coding_bench.adapters.modal_qwen38_vllm import ARMS, Qwen38Client, thinking_enabled
+    from coding_bench.adapters.modal_qwen38_vllm import Qwen38Client, thinking_enabled
 
     client = object.__new__(Qwen38Client)
-    client.arm = arm
-    client.model_id = ARMS[arm][0]
     client.temperature = 0.0
     client.reasoning_strength = reasoning_strength
     client.enable_thinking = thinking_enabled(reasoning_strength)
@@ -497,18 +566,16 @@ def test_a_cut_off_generation_raises_rather_than_scoring_as_no_codes():
     completion would score it as the model correctly finding nothing, and the
     truncation rate that should quarantine the run would never be visible.
     """
-    for arm in ("fp8", "bf16"):
-        client, _ = build_qwen38_client(
-            arm,
-            message={"content": '{"codes": [{"code": "I10", "quo'},
-            stop_reason="length",
-            latency_s=120.0,
-            usage={"prompt_tokens": 11000, "completion_tokens": 16384},
-        )
-        with pytest.raises(Truncated) as raised:
-            client.complete("system", "user", max_tokens=16384)
-        assert raised.value.produced_tokens == 16384
-        assert raised.value.model_id == client.model_id
+    client, _ = build_qwen38_client(
+        message={"content": '{"codes": [{"code": "I10", "quo'},
+        stop_reason="length",
+        latency_s=120.0,
+        usage={"prompt_tokens": 11000, "completion_tokens": 16384},
+    )
+    with pytest.raises(Truncated) as raised:
+        client.complete("system", "user", max_tokens=16384)
+    assert raised.value.produced_tokens == 16384
+    assert raised.value.model_id == "Qwen/Qwen3.8-27B-FP8"
 
 
 def test_the_answer_is_read_out_of_the_reasoning_channel():
@@ -530,7 +597,10 @@ def test_the_answer_is_read_out_of_the_reasoning_channel():
     assert "I10" in client.complete("system", "user", max_tokens=16384).text
 
 
-def test_the_run_parameters_reach_the_server():
+def test_the_qwen38_run_parameters_reach_the_server():
+    # Named for its model rather than reusing the gemma4 test's name. A second
+    # `def` of the same name silently replaces the first, so the shadowed test
+    # stops running and the suite still goes green with one fewer check.
     client, stub = build_qwen38_client(
         message={"content": "{}"}, stop_reason="stop", latency_s=1.0, usage={},
     )
@@ -539,18 +609,6 @@ def test_the_run_parameters_reach_the_server():
     assert call["max_tokens"] == 16384
     assert call["temperature"] == 0.0, "greedy, so a rerun reproduces the run"
     assert call["enable_thinking"] is True, "thinking, matching the Qwen3.6 row"
-
-
-def test_the_arms_ask_for_identical_generations():
-    """Kept honest for the ablation that is not queued yet."""
-    calls = {}
-    for arm in ("fp8", "bf16"):
-        client, stub = build_qwen38_client(
-            arm, message={"content": "{}"}, stop_reason="stop", latency_s=1.0, usage={},
-        )
-        client.complete("a system prompt", "a user prompt", max_tokens=16384)
-        calls[arm] = stub.calls[0]
-    assert calls["fp8"] == calls["bf16"], "the arms asked for different generations"
 
 
 def test_candidate_caching_approaches_are_pinned_to_one_thread():

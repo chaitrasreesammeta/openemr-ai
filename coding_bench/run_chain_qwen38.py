@@ -85,10 +85,13 @@ app = modal.App("coding-bench-chain-qwen38")
 results_volume = modal.Volume.from_name("coding-benchmark-results", create_if_missing=True)
 gold_volume = modal.Volume.from_name("coding-benchmark-gold", create_if_missing=False)
 
-# Four in flight, matching MAX_NUM_SEQS on the server and what the other self
-# hosted runs used. Asking for more would queue at the door rather than widen
-# the batch; asking for fewer would leave the card idle between notes.
-CONCURRENCY = 4
+# Must match MAX_NUM_SEQS on the server. More would queue at the door rather than
+# widen the batch; fewer would leave slots idle. Written out rather than imported,
+# to keep this file free of the adapter's module level Modal objects, and pinned
+# to the server's value by a test instead, because the two drifting apart is
+# silent: the run still completes, just at the wrong width, and the latency
+# column becomes a fact about the mismatch.
+CONCURRENCY = 16
 
 CHAIN: list[dict] = [
     # Deployment condition first, larger task first.

@@ -128,7 +128,6 @@ the board's `## Models` section prints the mapping.
 | `muse-glimmer-30b` | (never banked) | Modal H100, transformers, bf16 weights | No |
 | `gemma4-26b-a4b-gguf` | Gemma 4 26B-A4B | Modal RTX PRO 6000, llama.cpp, `gemma-4-26B-A4B-it:qat-UD-Q4_K_XL` | No |
 | `qwen3.8-27b-fp8` | Qwen3.8 27B FP8 | Modal RTX PRO 6000, vLLM, `Qwen/Qwen3.8-27B-FP8` | No |
-| `qwen3.8-27b-bf16` | (never banked) | Modal RTX PRO 6000, vLLM, bf16 weights | No |
 
 `--approach` takes `llm` (the default), `retr_llm`, and the three that need no
 model at all: `retrieval` (BGE embeddings), `embed_match` and `entity_match`.
@@ -165,10 +164,10 @@ generation, which measured at roughly six minutes per note and put a 578 note
 run near sixty hours. llama.cpp exists in this repo because of that number, not
 out of preference.
 
-**Only the FP8 Qwen3.8 build is on the board.** `qwen3.8-27b-bf16` is registered
-and is not queued, for the same reason the bf16 Muse adapter is not: it is the
-arm that would settle what FP8 costs, and that is not the question a deployment
-board answers. Which build gets the row is argued out in
+**Only the FP8 Qwen3.8 build is served.** Qwen publishes bf16 weights too and
+this package does not carry an adapter for them, so there is no path by which a
+bf16 number reaches the board. Which build gets the row, and what is therefore
+not measured, is argued out in
 [Qwen3.8 27B, and why FP8](#qwen38-27b-and-why-fp8) below.
 
 **Gemma 4 is quantised too, and its adapter is a reconstruction.** The model is
@@ -209,7 +208,7 @@ the results volume. The collect step runs on `always()` for that reason, so a
 timed out watch still banks three conditions out of four, and `action: collect`
 picks up the rest whenever it lands.
 
-By hand, which is what a rerun or a bf16 ablation needs:
+By hand, which is what a rerun needs:
 
 ```bash
 modal deploy coding_bench/adapters/modal_qwen38_vllm.py
@@ -250,15 +249,20 @@ measuring it. **Read the tail band first**: quantisation costs rare label recall
 before it costs anything a headline number can see, which is why this benchmark
 reports frequency bands at all.
 
-The bf16 arm stays registered and unqueued so that the ablation is a chain step
-rather than a rewrite. `SERVER_ARGS` is shared and `server_command` varies only
-the checkpoint, and `tests/test_adapters.py` asserts the two argument lists
-differ in exactly those two positions. Two flags are named in that test because
-they are the ones somebody will reasonably reach for: `--kv-cache-dtype fp8`,
-which vLLM's own recipe for this model suggests and which on one arm alone would
-quantise the weights and the cache and report the sum as the weight effect, and
-`--max-num-seqs`, which the FP8 arm has the VRAM to raise and which would change
-what it decodes as well as how fast.
+**What is therefore not measured is what FP8 costs against bf16 on this
+benchmark.** Answering that needs both builds on identical settings plus a
+replicate, because greedy decoding under vLLM does not reproduce itself bitwise:
+batched matmuls reduce in an order that depends on how many sequences are in
+flight, so a rerun disagrees on some notes with nothing changed, and a delta has
+to clear that floor before it means anything. That is a separate experiment with
+its own protocol, not a second row, and nothing here should be read as having
+measured it.
+
+One flag is worth naming because it is the one somebody will reach for:
+`--kv-cache-dtype fp8`, which vLLM's own recipe for this model suggests. It is
+not taken. The id on this row says fp8 *weights*, and quantising the cache too
+would make the row a build Qwen never published, quantised in a second place
+nothing here has measured, still labelled with the released id.
 
 ### The configuration, which is where comparability actually lives
 
@@ -277,9 +281,22 @@ model on latency while doing it.
 the prediction cache key, so a different value is not only incomparable, it
 misses every cached note and pays again.
 
-**The card is the RTX PRO 6000**, at four concurrent notes, which is what Muse
-Glimmer and Gemma 4 ran on. Latency between self-hosted rows is only a
-comparison if the hardware is the same one.
+**The card is the RTX PRO 6000**, which is what Muse Glimmer and Gemma 4 ran on.
+Latency between self-hosted rows is only a comparison if the hardware is the
+same one.
+
+The batch width is **not** held to theirs, and that is the one deliberate break
+in this list. Muse and Gemma ran four wide; this runs sixteen, because four used
+a third of a 96 GB card and put the full set at an estimated eight to twelve
+hours, longer than any single run can watch. At sixteen the weights and cache
+take about 70 GB of the 86 vLLM will use.
+
+What that costs is one column. Mean per note latency is no longer directly
+comparable with the Muse and Gemma rows, because latency under continuous
+batching is a property of the batch and not of the model. No accuracy column
+moves, `concurrency` is recorded in every run manifest, and a test pins the slot
+arithmetic against the headroom that prefill activations and graph capture need,
+so raising it further has to be a decision rather than an edit to a comment.
 
 **All four conditions run**, cpt and icd10 by gold and full, because a partial
 row cannot be ranked against a full one.
@@ -419,7 +436,7 @@ coding_bench/
     modal_muse.py       Muse Glimmer 30B, bf16 transformers, Modal H100
     modal_muse_gguf.py  Muse Glimmer 30B, dynamic K-quant, llama.cpp
     modal_gemma4_gguf.py  Gemma 4 26B-A4B, QAT 4 bit, llama.cpp
-    modal_qwen38_vllm.py  Qwen3.8 27B FP8, vLLM; the bf16 arm is unqueued
+    modal_qwen38_vllm.py  Qwen3.8 27B FP8, vLLM
   scripts/              guard rails, and probes for why a model went quiet
   tests/                no network, no GPU, no restricted data
   run_chain*.py         detached multi step runs that outlive their client

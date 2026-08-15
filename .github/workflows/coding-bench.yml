@@ -689,6 +689,16 @@ jobs:
         # architecture it will not serve, or an fp8 kernel that fell back to
         # bf16 all show up here, and finding any of them at note one of 578
         # costs the whole queue.
+        #
+        # The timeout is the bound on a crash-looping container, and it is here
+        # rather than in the adapter on purpose. A bad serving flag makes `vllm
+        # serve` exit at argument parsing and the adapter raises within seconds
+        # with the reason, but Modal keeps restarting the container while a
+        # caller waits, which once ran for 22 minutes. 40 minutes is generous
+        # for a genuine first start, which pulls 27 GB and then initialises an
+        # engine, and it is a hard ceiling on churn. An adapter side guard was
+        # tried for this and removed: it blocked a correct configuration.
+        timeout-minutes: 40
         run: |
           set -o pipefail
           modal run coding_bench/adapters/modal_qwen38_vllm.py::smoke 2>&1 | tee -a /tmp/gpu.log

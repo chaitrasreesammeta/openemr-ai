@@ -70,12 +70,10 @@ MODEL_NAMES: dict[str, tuple[str, str]] = {
     ),
     "openai/gpt-oss-120b": ("GPT-OSS 120B", "Groq API"),
     "qwen/qwen3.6-27b": ("Qwen3.6 27B", "Groq API"),
-    # FP8 is the build that runs. The bf16 id is named anyway, so that if the
-    # unqueued arm is ever banked it arrives as its own row rather than as a raw
-    # path, and so that neither can be read as the other. These are the same
-    # trained weights, which is exactly why they must not share a name.
+    # Named FP8, not "Qwen3.8 27B". Qwen publishes bf16 weights under a separate
+    # id and this row is not them, so the label carries the build for the same
+    # reason the GGUF entries do.
     "Qwen/Qwen3.8-27B-FP8": ("Qwen3.8 27B FP8", "FP8 block-128, self-hosted vLLM"),
-    "Qwen/Qwen3.8-27B": ("Qwen3.8 27B BF16", "BF16 weights, self-hosted vLLM"),
 }
 
 
