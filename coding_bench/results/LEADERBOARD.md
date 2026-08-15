@@ -18,7 +18,7 @@ CI regenerates this file and fails if the committed copy differs.
 
 | Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
-| Qwen3.6 27B | icd10 | full | 578 | 0.528 [0.512, 0.542] | 0.343 | 0.755 | 0.344 | 0.066 | 1.0% | 12.2s |
+| Qwen3.6 27B | icd10 | full | 578 | 0.528 [0.512, 0.542] | 0.343 | 0.755 | 0.344 | 0.066 | 1.2% | 12.2s |
 | Claude Sonnet 5 | icd10 | full | 578 | 0.523 [0.506, 0.538] | 0.316 | 0.748 | 0.343 | 0.073 | 0.0% | 8.3s |
 | Muse Glimmer 30B | icd10 | full | 578 | 0.423 [0.401, 0.445] | 0.233 | 0.617 | 0.247 | 0.047 | 4.0% | 119.0s |
 | GPT-OSS 120B | icd10 | full | 578 | 0.408 [0.388, 0.428] | 0.211 | 0.618 | 0.241 | 0.054 | 0.0% | 5.5s |
@@ -284,10 +284,12 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `cpt__llm__claude-sonnet-5__candfull__20260814T105003Z`: dataset `3e4376d906ea`, git `f4cedc389ae9`, provider anthropic
 - `cpt__llm__claude-sonnet-5__candfull__20260814T151929Z`: dataset `3e4376d906ea`, git `31e9d0946d10`, provider anthropic
 - `cpt__llm__claude-sonnet-5__candfull__20260814T155321Z`: dataset `3e4376d906ea`, git `2bf2214d0871`, provider anthropic
+- `cpt__llm__claude-sonnet-5__candfull__20260815T075341Z`: dataset `3e4376d906ea`, git `dc98ae3c8a38`, provider anthropic
 - `cpt__llm__claude-sonnet-5__candgold__20260813T220932Z`: dataset `3e4376d906ea`, git `a733c932f154`, provider anthropic
 - `cpt__llm__claude-sonnet-5__candgold__20260814T104946Z`: dataset `3e4376d906ea`, git `f4cedc389ae9`, provider anthropic
 - `cpt__llm__claude-sonnet-5__candgold__20260814T151913Z`: dataset `3e4376d906ea`, git `31e9d0946d10`, provider anthropic
 - `cpt__llm__claude-sonnet-5__candgold__20260814T155239Z`: dataset `3e4376d906ea`, git `2bf2214d0871`, provider anthropic
+- `cpt__llm__claude-sonnet-5__candgold__20260815T075325Z`: dataset `3e4376d906ea`, git `dc98ae3c8a38`, provider anthropic
 - `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260812T022922Z`: dataset `3e4376d906ea`, git `a5d3c7a960de`, provider modal only
 - `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260812T035127Z`: dataset `3e4376d906ea`, git `4d973679a655`, provider modal only
 - `cpt__llm__google-gemma-4-26B-A4B-it:qat-UD-Q4_K_XL__candgold__20260813T130241Z`: dataset `3e4376d906ea`, git `0831276676e5`, provider modal only
@@ -302,32 +304,38 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `cpt__llm__openai-gpt-oss-120b__candfull__20260814T104826Z`: dataset `3e4376d906ea`, git `f4cedc389ae9`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candfull__20260814T151653Z`: dataset `3e4376d906ea`, git `31e9d0946d10`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candfull__20260814T155026Z`: dataset `3e4376d906ea`, git `2bf2214d0871`, provider groq
+- `cpt__llm__openai-gpt-oss-120b__candfull__20260815T075051Z`: dataset `3e4376d906ea`, git `dc98ae3c8a38`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260811T234611Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260813T142700Z`: dataset `3e4376d906ea`, git `e188bb34861a`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260813T214043Z`: dataset `3e4376d906ea`, git `a733c932f154`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260814T104814Z`: dataset `3e4376d906ea`, git `f4cedc389ae9`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260814T151642Z`: dataset `3e4376d906ea`, git `31e9d0946d10`, provider groq
 - `cpt__llm__openai-gpt-oss-120b__candgold__20260814T155008Z`: dataset `3e4376d906ea`, git `2bf2214d0871`, provider groq
+- `cpt__llm__openai-gpt-oss-120b__candgold__20260815T075038Z`: dataset `3e4376d906ea`, git `dc98ae3c8a38`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candfull__20260812T012944Z`: dataset `3e4376d906ea`, git `6447232158d3`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candfull__20260813T142537Z`: dataset `3e4376d906ea`, git `e188bb34861a`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candfull__20260813T214034Z`: dataset `3e4376d906ea`, git `a733c932f154`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candfull__20260814T104803Z`: dataset `3e4376d906ea`, git `f4cedc389ae9`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candfull__20260814T151634Z`: dataset `3e4376d906ea`, git `31e9d0946d10`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candfull__20260814T154953Z`: dataset `3e4376d906ea`, git `2bf2214d0871`, provider groq
+- `cpt__llm__qwen-qwen3.6-27b__candfull__20260815T075028Z`: dataset `3e4376d906ea`, git `dc98ae3c8a38`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260812T000303Z`: dataset `3e4376d906ea`, git `a7cbadffb816`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260813T142137Z`: dataset `3e4376d906ea`, git `e188bb34861a`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260813T214023Z`: dataset `3e4376d906ea`, git `a733c932f154`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260814T104753Z`: dataset `3e4376d906ea`, git `f4cedc389ae9`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260814T151624Z`: dataset `3e4376d906ea`, git `31e9d0946d10`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260814T154943Z`: dataset `3e4376d906ea`, git `2bf2214d0871`, provider groq
+- `cpt__llm__qwen-qwen3.6-27b__candgold__20260815T075016Z`: dataset `3e4376d906ea`, git `dc98ae3c8a38`, provider groq
 - `icd10__llm__claude-sonnet-5__candfull__20260813T214135Z`: dataset `0b6d503e3b12`, git `a733c932f154`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candfull__20260814T104912Z`: dataset `0b6d503e3b12`, git `f4cedc389ae9`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candfull__20260814T151753Z`: dataset `0b6d503e3b12`, git `31e9d0946d10`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candfull__20260814T155200Z`: dataset `0b6d503e3b12`, git `2bf2214d0871`, provider anthropic
+- `icd10__llm__claude-sonnet-5__candfull__20260815T075159Z`: dataset `0b6d503e3b12`, git `dc98ae3c8a38`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candgold__20260813T214105Z`: dataset `0b6d503e3b12`, git `a733c932f154`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candgold__20260814T104837Z`: dataset `0b6d503e3b12`, git `f4cedc389ae9`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candgold__20260814T151709Z`: dataset `0b6d503e3b12`, git `31e9d0946d10`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candgold__20260814T155055Z`: dataset `0b6d503e3b12`, git `2bf2214d0871`, provider anthropic
+- `icd10__llm__claude-sonnet-5__candgold__20260815T075104Z`: dataset `0b6d503e3b12`, git `dc98ae3c8a38`, provider anthropic
 - `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candfull__20260813T154130Z`: dataset `0b6d503e3b12`, git `ee69a57cd02f`, provider modal only
 - `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260811T225054Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider modal only
 - `icd10__llm__meta-models-Muse-Glimmer-30B-GGUF:kquant-dynamic__candgold__20260813T134819Z`: dataset `0b6d503e3b12`, git `0831276676e5`, provider modal only
@@ -338,12 +346,14 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `icd10__llm__openai-gpt-oss-120b__candfull__20260814T104712Z`: dataset `0b6d503e3b12`, git `f4cedc389ae9`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candfull__20260814T151530Z`: dataset `0b6d503e3b12`, git `31e9d0946d10`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candfull__20260814T154906Z`: dataset `0b6d503e3b12`, git `2bf2214d0871`, provider groq
+- `icd10__llm__openai-gpt-oss-120b__candfull__20260815T074951Z`: dataset `0b6d503e3b12`, git `dc98ae3c8a38`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260811T201458Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260813T143846Z`: dataset `0b6d503e3b12`, git `e188bb34861a`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260813T213933Z`: dataset `0b6d503e3b12`, git `a733c932f154`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260814T104636Z`: dataset `0b6d503e3b12`, git `f4cedc389ae9`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260814T151513Z`: dataset `0b6d503e3b12`, git `31e9d0946d10`, provider groq
 - `icd10__llm__openai-gpt-oss-120b__candgold__20260814T154851Z`: dataset `0b6d503e3b12`, git `2bf2214d0871`, provider groq
+- `icd10__llm__openai-gpt-oss-120b__candgold__20260815T074934Z`: dataset `0b6d503e3b12`, git `dc98ae3c8a38`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260811T230052Z`: dataset `0b6d503e3b12`, git `a7cbadffb816`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260812T001122Z`: dataset `0b6d503e3b12`, git `6447232158d3`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260812T015022Z`: dataset `0b6d503e3b12`, git `d315cc5da372`, provider groq
@@ -352,9 +362,11 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260814T104214Z`: dataset `0b6d503e3b12`, git `f4cedc389ae9`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260814T151024Z`: dataset `0b6d503e3b12`, git `31e9d0946d10`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candfull__20260814T154424Z`: dataset `0b6d503e3b12`, git `2bf2214d0871`, provider groq
+- `icd10__llm__qwen-qwen3.6-27b__candfull__20260815T074517Z`: dataset `0b6d503e3b12`, git `dc98ae3c8a38`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260811T205552Z`: dataset `0b6d503e3b12`, git `unknown`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260813T142759Z`: dataset `0b6d503e3b12`, git `e188bb34861a`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260813T213453Z`: dataset `0b6d503e3b12`, git `a733c932f154`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260814T104127Z`: dataset `0b6d503e3b12`, git `f4cedc389ae9`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260814T150928Z`: dataset `0b6d503e3b12`, git `31e9d0946d10`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260814T154336Z`: dataset `0b6d503e3b12`, git `2bf2214d0871`, provider groq
+- `icd10__llm__qwen-qwen3.6-27b__candgold__20260815T074429Z`: dataset `0b6d503e3b12`, git `dc98ae3c8a38`, provider groq
