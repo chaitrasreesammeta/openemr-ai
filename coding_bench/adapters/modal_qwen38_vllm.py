@@ -158,11 +158,23 @@ MAX_MODEL_LEN = 40960
 MAX_NUM_SEQS = 4
 GPU_MEMORY_UTILISATION = 0.90
 
-# vLLM 0.17.0 is the first release that serves this architecture, and the
-# multimodal path needs transformers 5.8. Pinned exactly rather than floored: a
-# minor bump that changes a kernel should invalidate the cache deliberately,
-# through the adapter hash, rather than arrive on a rebuild.
-VLLM_VERSION = "0.17.0"
+# 0.17.0 is the floor this model's vLLM recipe states, and it is not a usable
+# pin. vLLM 0.17.0 requires `transformers<5`, while this model's config.json is
+# written by transformers 5.8 and its processor has to match. Asking for both is
+# a ResolutionImpossible, which is how the first CI launch died: at image build,
+# in about four seconds, before a GPU was ever allocated.
+#
+# 0.24.0 is the first release that requires `transformers>=5.5.3` outright, so
+# anything from there up is coherent. Between them, 0.20 to 0.23 permit 5.x only
+# through a list of exclusions. 0.27.1 is the current release, it is the one the
+# rest of this package already talks about, and it carries torchvision as a hard
+# dependency, which a multimodal model needs on load even when nothing but text
+# is ever sent to it. modal_muse.py learned that the expensive way.
+#
+# Pinned exactly rather than floored: a minor bump can change a kernel, and that
+# should invalidate this model's cached notes deliberately through the adapter
+# hash rather than arrive unannounced on a rebuild.
+VLLM_VERSION = "0.27.1"
 TRANSFORMERS_VERSION = "5.8.0"
 
 app = modal.App(APP_NAME)

@@ -361,6 +361,36 @@ def test_the_kv_cache_is_not_quantised():
     assert "--model" not in args, "the checkpoint must come from the arm, not the shared args"
 
 
+def test_the_vllm_and_transformers_pins_are_mutually_satisfiable():
+    """They were not, and it cost a launch.
+
+    The model's vLLM recipe states a floor of 0.17.0 and, separately, that it
+    needs transformers >= 5.8.0 because that is what wrote its config.json.
+    Pinning the floor as a version asks for both at once, and vLLM 0.17.0
+    requires `transformers<5`, so pip returned ResolutionImpossible and the
+    image never built.
+
+    0.24.0 is the first vLLM to require `transformers>=5.5.3` outright. Below it
+    the constraint is either that hard `<5` cap or, from 0.20 to 0.23, a list of
+    exclusions across the 5.x line. Nothing here may reach PyPI, so what is
+    asserted is the floor, and the reason it exists is written down.
+    """
+    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+
+    def parts(version: str) -> tuple[int, ...]:
+        return tuple(int(piece) for piece in version.split("."))
+
+    assert parts(qwen38.VLLM_VERSION) >= (0, 24, 0), (
+        "vLLM below 0.24.0 does not permit the transformers 5.x this model's processor needs"
+    )
+    assert parts(qwen38.TRANSFORMERS_VERSION) >= (5, 8, 0)
+
+    # And both actually reach the image, or pinning them is decoration.
+    source = Path(qwen38.__file__).read_text(encoding="utf8")
+    assert 'f"vllm=={VLLM_VERSION}"' in source
+    assert 'f"transformers>={TRANSFORMERS_VERSION}"' in source
+
+
 def test_note_text_cannot_reach_the_server_log():
     """Tier 2 text stays inside Modal, and a log is outside enough to matter."""
     from coding_bench.adapters import modal_qwen38_vllm as qwen38
