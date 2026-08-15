@@ -56,6 +56,7 @@ The tables above name the model; the exact id is what reproduces it. A quantised
 | GPT-OSS 120B | Groq API | `openai/gpt-oss-120b` |
 | Muse Glimmer 30B | GGUF dynamic K-quant, self-hosted llama.cpp | `meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic` |
 | Qwen3.6 27B | Groq API | `qwen/qwen3.6-27b` |
+| Qwen3.8 27B FP8 | FP8 block-128, self-hosted vLLM | `Qwen/Qwen3.8-27B-FP8` |
 
 ## Quarantined runs
 
@@ -67,6 +68,7 @@ These runs exceeded the 5% failure ceiling. Failed notes score as empty predicti
 | Gemma 4 26B-A4B | cpt | gold | 312 | 9.9% | 9.9% | 0.654 |
 | Gemma 4 26B-A4B | cpt | gold | 312 | 5.1% | 5.1% | 0.710 |
 | Gemma 4 26B-A4B | cpt | gold | 312 | 5.4% | 5.4% | 0.730 |
+| Qwen3.8 27B FP8 | icd10 | full | 578 | 44.5% | 44.5% | 0.159 |
 | Qwen3.6 27B | icd10 | full | 578 | 5.0% | 2.6% | 0.513 |
 
 ## Head to head
@@ -338,6 +340,7 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260815T075016Z`: dataset `3e4376d906ea`, git `dc98ae3c8a38`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260815T103041Z`: dataset `3e4376d906ea`, git `d30083d0fd5f`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260815T140034Z`: dataset `3e4376d906ea`, git `3c603de5751e`, provider groq
+- `icd10__llm__Qwen-Qwen3.8-27B-FP8__candfull__20260815T142054Z`: dataset `0b6d503e3b12`, git `3c603de5751e`, provider modal only
 - `icd10__llm__claude-sonnet-5__candfull__20260813T214135Z`: dataset `0b6d503e3b12`, git `a733c932f154`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candfull__20260814T104912Z`: dataset `0b6d503e3b12`, git `f4cedc389ae9`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candfull__20260814T151753Z`: dataset `0b6d503e3b12`, git `31e9d0946d10`, provider anthropic
