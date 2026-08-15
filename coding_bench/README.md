@@ -127,6 +127,8 @@ the board's `## Models` section prints the mapping.
 | `muse-glimmer-30b-gguf` | Muse Glimmer 30B | Modal RTX PRO 6000, llama.cpp, `Muse-Glimmer-30B-GGUF:kquant-dynamic` | No |
 | `muse-glimmer-30b` | (never banked) | Modal H100, transformers, bf16 weights | No |
 | `gemma4-26b-a4b-gguf` | Gemma 4 26B-A4B | Modal RTX PRO 6000, llama.cpp, `gemma-4-26B-A4B-it:qat-UD-Q4_K_XL` | No |
+| `qwen3.8-27b-fp8` | Qwen3.8 27B FP8 | Modal RTX PRO 6000, vLLM, `Qwen/Qwen3.8-27B-FP8` | No |
+| `qwen3.8-27b-bf16` | (never banked) | Modal RTX PRO 6000, vLLM, bf16 weights | No |
 
 `--approach` takes `llm` (the default), `retr_llm`, and the three that need no
 model at all: `retrieval` (BGE embeddings), `embed_match` and `entity_match`.
@@ -163,6 +165,12 @@ generation, which measured at roughly six minutes per note and put a 578 note
 run near sixty hours. llama.cpp exists in this repo because of that number, not
 out of preference.
 
+**Only the FP8 Qwen3.8 build is on the board.** `qwen3.8-27b-bf16` is registered
+and is not queued, for the same reason the bf16 Muse adapter is not: it is the
+arm that would settle what FP8 costs, and that is not the question a deployment
+board answers. Which build gets the row is argued out in
+[Qwen3.8 27B, and why FP8](#qwen38-27b-and-why-fp8) below.
+
 **Gemma 4 is quantised too, and its adapter is a reconstruction.** The model is
 a mixture of experts, 26B parameters with about 4B active per token, served as
 Google's QAT weights in Unsloth's dynamic 4 bit build. Its id carries that build
@@ -173,6 +181,125 @@ written on another machine and never pushed, so `adapters/modal_gemma4_gguf.py`
 reproduces the configuration their manifests record rather than the original
 bytes. Their `adapter_sha256` will not match the committed file, and the
 docstring says so at the top.
+
+## Qwen3.8 27B, and why FP8
+
+Qwen releases this model twice, `Qwen/Qwen3.8-27B` at bf16 and
+`Qwen/Qwen3.8-27B-FP8` at fine grained fp8 with block size 128. Only one of them
+gets a row here, and it is the FP8 build.
+
+**CI runs this one.** Unlike Muse and Gemma, the Qwen3.8 chain launches from the
+commit that adds it and banks itself when it finishes. The `launch_gpu` job
+deploys both apps, smokes the server, spawns the chain, watches it for up to
+five hours, then collects, rescores, regenerates the board and commits. It runs
+after `evaluate` so the two cannot race each other's commit, and it needs a
+green `checks` to start, because the point of that gate is that a red suite must
+never buy inference.
+
+It fires on a push only when the push touched `adapters/modal_qwen38_vllm.py` or
+`run_chain_qwen38.py`, which are exactly the changes that invalidate this model's
+cached notes, and it refuses outright if records are already banked unless the
+dispatch sets `confirm_gpu_rerun`. A comment edit in an adapter changes its hash
+and therefore its cache key, and that must not silently buy the chain again.
+
+The watch is not what keeps the run alive. `run_now` spawns against the deployed
+app, so the chain belongs to Modal: cancel the job, hit the 350 minute ceiling,
+lose the runner, and it carries on with every finished step already committed to
+the results volume. The collect step runs on `always()` for that reason, so a
+timed out watch still banks three conditions out of four, and `action: collect`
+picks up the rest whenever it lands.
+
+By hand, which is what a rerun or a bf16 ablation needs:
+
+```bash
+modal deploy coding_bench/adapters/modal_qwen38_vllm.py
+modal run   coding_bench/adapters/modal_qwen38_vllm.py::smoke
+modal deploy coding_bench/run_chain_qwen38.py
+modal run   coding_bench/run_chain_qwen38.py::launch   # spawn and walk away
+# or: ::run_now, which spawns and then watches
+modal run   coding_bench/run_chain.py::fetch
+python -m coding_bench.bench.reporting
+```
+
+Smoke first either way. A chain that discovers on step one that vLLM will not
+serve this architecture has already paid for a GPU to find out, and `smoke` also
+prints whether an fp8 kernel actually loaded.
+
+### The build
+
+**This is a deployment board.** `full` candidates exists as a condition because
+gold candidates pin precision at 1.000 by construction and predict nothing about
+deployment. Every self-hosted row on the board is a deployment build: Muse
+Glimmer at roughly 4 bit, Gemma 4 at QAT 4 bit. A bf16 row would be the only
+self-hosted number on it measured at a precision nobody would serve for a 27B on
+this task.
+
+**A bf16 row would not buy comparability with the hosted rows either.** Neither
+Groq nor Anthropic publishes the precision it serves at, and at their prices and
+throughput it is unlikely to be bf16. Running bf16 to match them would be a
+claim about somebody else's stack that nobody outside it can check. FP8 is at
+least a precision this repository can name in the `## Models` key.
+
+**And it is a release rather than a quantisation of one**, with its own
+repository and card, which is why its id needs no `:quantisation` tag the way
+the GGUF builds do. Qwen puts it at nearly identical to the original, and the
+largest study of the format measures W8A8-FP8 as lossless across model scales.
+That evidence is about general benchmarks and says nothing about rare label
+recall, so it is a reason to expect FP8 to be fine here and not a reason to skip
+measuring it. **Read the tail band first**: quantisation costs rare label recall
+before it costs anything a headline number can see, which is why this benchmark
+reports frequency bands at all.
+
+The bf16 arm stays registered and unqueued so that the ablation is a chain step
+rather than a rewrite. `SERVER_ARGS` is shared and `server_command` varies only
+the checkpoint, and `tests/test_adapters.py` asserts the two argument lists
+differ in exactly those two positions. Two flags are named in that test because
+they are the ones somebody will reasonably reach for: `--kv-cache-dtype fp8`,
+which vLLM's own recipe for this model suggests and which on one arm alone would
+quantise the weights and the cache and report the sum as the weight effect, and
+`--max-num-seqs`, which the FP8 arm has the VRAM to raise and which would change
+what it decodes as well as how fast.
+
+### The configuration, which is where comparability actually lives
+
+Four things are held to what the rest of the board used, and each is a place a
+number could quietly stop being comparable.
+
+**Thinking is on.** `reasoning_strength: "medium"`, the package default, which
+on this adapter sets `enable_thinking: true` rather than prepending a line to
+the system prompt. This is the equivalence that matters most and the easiest to
+lose. The nearest row is Qwen3.6 27B, same family and same size, and Groq serves
+it as a reasoning model. An instruct mode Qwen3.8 measured against it would
+report a decoder difference as a model difference, and would flatter the newer
+model on latency while doing it.
+
+**max_tokens is 16,384**, what the board's ICD-10 and CPT runs used. It is in
+the prediction cache key, so a different value is not only incomparable, it
+misses every cached note and pays again.
+
+**The card is the RTX PRO 6000**, at four concurrent notes, which is what Muse
+Glimmer and Gemma 4 ran on. Latency between self-hosted rows is only a
+comparison if the hardware is the same one.
+
+**All four conditions run**, cpt and icd10 by gold and full, because a partial
+row cannot be ranked against a full one.
+
+### What will go wrong first
+
+Truncation, not a low score. Greedy decoding in thinking mode is the
+configuration Qwen warns about, because a trace can loop until it hits the cap
+and no JSON is ever produced. The adapter raises that as `Truncated` rather than
+returning an empty answer, the runner counts it separately, and a run over 5
+percent failures is quarantined rather than scored. Muse ran the same way and
+landed at 4.0 percent on ICD-10 full, just inside the ceiling. If a step
+quarantines, raise `max_tokens` for that step and record that it no longer
+matches the rest of the board.
+
+Greedy at all is this package's standing deviation from every model card in it,
+and it is worth knowing that greedy under vLLM is not bitwise reproducible
+anyway: batched matmuls reduce in an order that depends on how many sequences
+are in flight, so a rerun can disagree on a handful of notes with nothing having
+changed.
 
 ## Cost and the prediction cache
 
@@ -292,6 +419,7 @@ coding_bench/
     modal_muse.py       Muse Glimmer 30B, bf16 transformers, Modal H100
     modal_muse_gguf.py  Muse Glimmer 30B, dynamic K-quant, llama.cpp
     modal_gemma4_gguf.py  Gemma 4 26B-A4B, QAT 4 bit, llama.cpp
+    modal_qwen38_vllm.py  Qwen3.8 27B FP8, vLLM; the bf16 arm is unqueued
   scripts/              guard rails, and probes for why a model went quiet
   tests/                no network, no GPU, no restricted data
   run_chain*.py         detached multi step runs that outlive their client
@@ -324,7 +452,10 @@ closed that.
 GPU models are not in the pushed set. Muse and Gemma take hours and run as
 detached chains that outlive any client, so they are launched by hand and banked
 afterwards with a dispatch of `action: collect`, which pulls any finished record
-off the volume into git. A change to the prompt or to the gold manifests
+off the volume into git. Qwen3.8 is the exception: `launch_gpu` deploys, smokes,
+spawns and banks it from the commit that adds it, gated on the change actually
+touching its adapter or chain and on no records being banked already. See
+[Qwen3.8 27B, and why FP8](#qwen38-27b-and-why-fp8). A change to the prompt or to the gold manifests
 invalidates every model's cache, so `evaluate` refuses to do that from a push
 and asks for a dispatch with `confirm_full_rerun`.
 

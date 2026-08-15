@@ -77,6 +77,12 @@ ADAPTER_FILES = {
     "muse-glimmer-30b": "modal_muse.py",
     "gemma4-26b-a4b-gguf": "modal_gemma4_gguf.py",
     "sonnet-5": "api_anthropic.py",
+    # FP8 is the build that gets a row; the bf16 arm is registered and unqueued,
+    # the way modal_muse.py is. One file backs both on purpose, because the two
+    # are meant to be the same code and a shared adapter hash in the manifest is
+    # the record of that. The model id is what separates their cache entries.
+    "qwen3.8-27b-fp8": "modal_qwen38_vllm.py",
+    "qwen3.8-27b-bf16": "modal_qwen38_vllm.py",
 }
 
 # Everything with an adapter that is not reached over someone else's API, which
@@ -172,6 +178,18 @@ def build_predictor(
         # Quantised, and named as such in the run manifest, for the same reason
         # the Muse GGUF is: a QAT 4 bit build is not the released model.
         client = Gemma4GGUFClient(reasoning_strength=reasoning_strength)
+    elif model in ("qwen3.8-27b-fp8", "qwen3.8-27b-bf16"):
+        from coding_bench.adapters.modal_qwen38_vllm import Qwen38Client
+
+        # On this adapter reasoning_strength drives the model's own thinking
+        # switch rather than a line prepended to the system prompt, because this
+        # model has a real switch and the llama.cpp adapters do not. The default
+        # of "medium" therefore thinks, which is what the Qwen3.6 row on the
+        # board was measured doing. See the header of modal_qwen38_vllm.py.
+        client = Qwen38Client(
+            arm="fp8" if model.endswith("fp8") else "bf16",
+            reasoning_strength=reasoning_strength,
+        )
     else:
         raise ValueError(
             f"Unknown model {model!r}. Known: "
