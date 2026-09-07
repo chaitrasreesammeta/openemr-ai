@@ -175,6 +175,38 @@ def _comparable(a: dict, b: dict) -> bool:
     return len(_shared_notes(a, b)) >= MIN_PAIRED_NOTES
 
 
+def _note_results(run: dict, keep: set[str]):
+    """Only the shared notes, so a pairing is genuinely note for note."""
+    from coding_bench.bench import metrics as m
+
+    return [
+        m.NoteResult(note_id=row["note_id"], gold=row["gold"], pred=row["pred"])
+        for row in run["predictions"]
+        if row["note_id"] in keep
+    ]
+
+
+def _separated(leader: dict, other: dict) -> bool:
+    """Does a paired bootstrap actually put `leader` ahead of `other`?
+
+    False means the two are inside each other's noise, which is the only honest
+    reading of a gap the interval spans. Pairs too short to compare come back
+    True rather than tied: a tie is a claim, and fewer than `MIN_PAIRED_NOTES`
+    shared notes cannot support one.
+    """
+    from coding_bench.bench import metrics as m
+
+    if not (leader["predictions"] and other["predictions"]):
+        return True
+    if not _comparable(leader, other):
+        return True
+    shared = _shared_notes(leader, other)
+    outcome = m.paired_bootstrap(
+        _note_results(leader, shared), _note_results(other, shared), statistic="micro_f1"
+    )
+    return bool(outcome["significant"])
+
+
 def _paired_section(valid: list[dict]) -> list[str]:
     """Head to head deltas, with the significance rule applied.
 
@@ -204,17 +236,9 @@ def _paired_section(valid: list[dict]) -> list[str]:
         "|---|---|---|---:|---|---:|---|---|",
     ]
 
-    def results_of(run: dict, keep: set[str]):
-        """Only the shared notes, so the pairing is genuinely note for note."""
-        return [
-            m.NoteResult(note_id=row["note_id"], gold=row["gold"], pred=row["pred"])
-            for row in run["predictions"]
-            if row["note_id"] in keep
-        ]
-
     for a, b in pairs:
         shared = _shared_notes(a, b)
-        rows_a, rows_b = results_of(a, shared), results_of(b, shared)
+        rows_a, rows_b = _note_results(a, shared), _note_results(b, shared)
         for statistic in ("micro_f1", "macro_f1", "exact_match"):
             outcome = m.paired_bootstrap(rows_a, rows_b, statistic=statistic)
             lines.append(
@@ -239,11 +263,26 @@ def deduplicate(runs: list[dict]) -> list[dict]:
     itself and reports a delta of exactly zero with a tight interval. That reads
     like a finding rather than like the same run twice.
 
-    Coverage decides, not recency. A 578 note run supersedes the 150 note run
-    that preceded it whichever order they happened in, because the runner slices
-    the dataset in sorted note id order, so the short run's notes are a prefix of
-    the long one's and its numbers carry strictly less information. Recency only
-    breaks ties between runs of equal length.
+    Coverage decides first. A 578 note run supersedes the 150 note run that
+    preceded it whichever order they happened in, because the runner slices the
+    dataset in sorted note id order, so the short run's notes are a prefix of
+    the long one's and its numbers carry strictly less information.
+
+    Then the failure rate, and only then recency. Ranking equal length runs on
+    recency alone let a noisier rerun represent a configuration, and that is not
+    a cosmetic preference. A failed note scores as an empty prediction, so it
+    costs recall, so the record with more transient provider errors reports a
+    lower F1 for the same answers. Qwen3.6 on icd10 at full candidates had
+    eleven records spanning 0.5132 to 0.5283, and the most recent carried
+    fourteen rate limited notes against the cleanest one's five. On the 564
+    notes both of those runs answered, both score 0.5335 exactly: the
+    predictions are cache identical and only the error set differs. Picking on
+    recency published the noisiest of them, which was enough to hand icd10 full
+    to Qwen3.8 on a gap of 0.0028 that the head to head table on this same page
+    called insignificant, and that reverses once the errored notes come out.
+
+    Recency still breaks ties between runs of equal length and equal error rate,
+    where by this argument the numbers cannot differ anyway.
 
     Nothing is deleted. The superseded records stay on disk and stay listed under
     Provenance, so the attempt is still visible; it just stops being counted
@@ -253,11 +292,15 @@ def deduplicate(runs: list[dict]) -> list[dict]:
     for run in runs:
         manifest = run["manifest"]
         key = (manifest["model_id"], manifest["task"], str(manifest["candidate_space"]))
-        # `started_at` only breaks ties between runs of equal length, so a
-        # record without one still sorts correctly on coverage. Reading it
-        # directly took the whole leaderboard down with a KeyError instead,
-        # which is a steep price for a field that is only a tiebreak.
-        rank = (manifest["n_notes"], manifest.get("started_at", ""))
+        # Every term is read defensively. `started_at` only breaks ties between
+        # runs of equal length, so a record without one still sorts correctly on
+        # coverage; reading it directly took the whole leaderboard down with a
+        # KeyError instead, which is a steep price for a field that is only a
+        # tiebreak. The error rate is negated so that fewer failures rank
+        # higher under the same `>` comparison, and a record that never stated
+        # one is read as clean, matching `is_valid`.
+        error_rate = run["metrics"]["operational"].get("error_rate", 0.0)
+        rank = (manifest["n_notes"], -error_rate, manifest.get("started_at", ""))
         if key not in best or rank > best[key][0]:
             best[key] = (rank, run)
     return [run for _rank, run in best.values()]
@@ -292,6 +335,14 @@ def summary_block(runs: list[dict]) -> str:
     Four rows and a caveat. Anything longer belongs on the board, which the
     block links to; the README's job is to say what the benchmark found, not to
     reproduce it.
+
+    A row names every model the leader is not separated from, because ranking
+    on micro F1 alone will crown one on a gap its own interval spans. That is
+    not hypothetical: icd10 at full candidates was handed to Qwen3.8 on 0.0028
+    over Qwen3.6 while the head to head table two files away marked the same
+    comparison insignificant. The README is the most read file in the
+    repository and the one place a reader will not go looking for a caveat, so
+    the tie is stated here rather than left to be discovered.
     """
     valid = deduplicate([run for run in runs if is_valid(run)])
 
@@ -311,16 +362,32 @@ def summary_block(runs: list[dict]) -> str:
         "| Task | Candidates | Best model | n | Micro F1 [95% CI] | Latency |",
         "|---|---|---|---:|---|---:|",
     ]
+    tied_anywhere = False
     for (task, space), ranked in conditions(valid):
         run = ranked[0]
+        tied = [other for other in ranked[1:] if not _separated(run, other)]
+        tied_anywhere = tied_anywhere or bool(tied)
+        names = ", ".join(
+            display_name(r["manifest"]["model_id"]) for r in (run, *tied)
+        )
+        if tied:
+            names += " (tied)"
         core, ops = run["metrics"]["core"], run["metrics"]["operational"]
         low, high = run["metrics"]["uncertainty"]["micro_f1_ci95"]
         lines.append(
-            f"| {task} | {space} | {display_name(run['manifest']['model_id'])} "
+            f"| {task} | {space} | {names} "
             f"| {run['manifest']['n_notes']} "
             f"| {core['micro_f1']:.3f} [{low:.3f}, {high:.3f}] "
             f"| {ops['latency_mean_s']:.1f}s |"
         )
+    if tied_anywhere:
+        lines += [
+            "",
+            "Models marked tied are not separated from the first named by a "
+            "paired bootstrap over the notes they share, so the ordering "
+            "between them is resampling noise and not a result. The interval, "
+            "n and latency in such a row describe the first named model only.",
+        ]
     lines += ["", SUMMARY_END]
     return "\n".join(lines)
 

@@ -309,10 +309,12 @@ The measurement it exists for is the **gold to full catalogue collapse**. Offeri
 
 | Task | Candidates | Best model | n | Micro F1 [95% CI] | Latency |
 |---|---|---|---:|---|---:|
-| cpt | full | Qwen3.6 27B | 312 | 0.845 [0.802, 0.887] | 4.2s |
-| icd10 | full | Qwen3.8 27B | 578 | 0.526 [0.510, 0.541] | 8.2s |
+| cpt | full | Qwen3.6 27B, Claude Sonnet 5 (tied) | 312 | 0.845 [0.802, 0.887] | 4.2s |
+| icd10 | full | Qwen3.6 27B, Qwen3.8 27B, Claude Sonnet 5 (tied) | 578 | 0.528 [0.512, 0.542] | 11.9s |
 | cpt | gold | Claude Sonnet 5 | 312 | 0.947 [0.928, 0.962] | 1.6s |
-| icd10 | gold | Qwen3.6 27B | 578 | 0.815 [0.801, 0.829] | 6.6s |
+| icd10 | gold | Qwen3.6 27B, Claude Sonnet 5 (tied) | 578 | 0.815 [0.801, 0.829] | 6.6s |
+
+Models marked tied are not separated from the first named by a paired bootstrap over the notes they share, so the ordering between them is resampling noise and not a result. The interval, n and latency in such a row describe the first named model only.
 
 <!-- coding-bench-summary:end -->
 

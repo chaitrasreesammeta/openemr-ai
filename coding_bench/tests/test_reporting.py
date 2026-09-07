@@ -188,6 +188,53 @@ def test_deduplication_survives_a_record_with_no_start_time():
     assert "| 150 |" not in rendered, "the better covered run supersedes the short one"
 
 
+def test_deduplication_prefers_the_cleaner_run_over_the_later_one():
+    """At equal coverage the failure rate decides, because it moves the score.
+
+    A failed note scores as an empty prediction, so it costs recall, so the
+    record with more transient provider errors reports a lower F1 for the same
+    answers. Ranking equal length runs on recency alone published Qwen3.6's
+    noisiest icd10 full record, fourteen rate limited notes against the
+    cleanest one's five, and the 0.0054 of self inflicted damage was enough to
+    hand the condition to another model on a gap the head to head on the same
+    page called insignificant.
+    """
+    noisy = make_run("noisy", 0.5229, error_rate=0.024)
+    clean = make_run("clean", 0.5283, error_rate=0.009)
+    noisy["manifest"]["started_at"] = "2026-09-07T04:53:51Z"
+    clean["manifest"]["started_at"] = "2026-08-15T13:56:33Z"
+    for run in (noisy, clean):
+        run["manifest"]["model_id"] = "same-model"
+
+    kept = reporting.deduplicate([noisy, clean])
+    assert [run["manifest"]["run_id"] for run in kept] == ["clean"]
+
+
+def test_recency_still_breaks_ties_between_equally_clean_runs():
+    """Where the error rates match, the numbers cannot differ, so recency is fine."""
+    older = make_run("older", 0.5)
+    newer = make_run("newer", 0.5)
+    older["manifest"]["started_at"] = "2026-08-01T00:00:00Z"
+    newer["manifest"]["started_at"] = "2026-09-01T00:00:00Z"
+    for run in (older, newer):
+        run["manifest"]["model_id"] = "same-model"
+
+    kept = reporting.deduplicate([older, newer])
+    assert [run["manifest"]["run_id"] for run in kept] == ["newer"]
+
+
+def test_coverage_still_outranks_a_cleaner_short_run():
+    """A clean 150 note run is still less information than a noisier 578 note one."""
+    short = make_run("short", 0.9)
+    short["manifest"]["n_notes"] = 150
+    long_run = make_run("long", 0.5, error_rate=0.03)
+    for run in (short, long_run):
+        run["manifest"]["model_id"] = "same-model"
+
+    kept = reporting.deduplicate([short, long_run])
+    assert [run["manifest"]["run_id"] for run in kept] == ["long"]
+
+
 # --------------------------------------------------------------------------
 # Model names: the tables are read by people, the ids are matched by machines
 
@@ -244,6 +291,42 @@ def test_a_quarantined_run_never_wins_a_condition():
     )
     assert "model-clean" in block
     assert "model-failed" not in block
+
+
+def test_the_summary_marks_a_tie_rather_than_crowning_one_model():
+    """Ranking on micro F1 alone will crown a model on a gap its interval spans.
+
+    icd10 at full candidates was handed to Qwen3.8 on 0.0028 over Qwen3.6 while
+    the head to head marked that same comparison insignificant. The README is
+    the most read file in the repository, so the tie is stated in it.
+    """
+    ids = [str(i) for i in range(80)]
+    leader = with_predictions(make_run("leader", 0.90), ids, True)
+    equal = with_predictions(make_run("equal", 0.90), ids, True)
+
+    block = reporting.summary_block([leader, equal])
+    assert "(tied)" in block
+    assert "model-leader" in block and "model-equal" in block
+
+
+def test_a_genuinely_separated_winner_is_not_marked_tied():
+    """The tie marking has to stay rare, or it says nothing when it appears."""
+    ids = [str(i) for i in range(80)]
+    leader = with_predictions(make_run("leader", 0.9), ids, True)
+    loser = with_predictions(make_run("loser", 0.1), ids, False)
+
+    block = reporting.summary_block([leader, loser])
+    assert "(tied)" not in block
+    assert "model-loser" not in block
+
+
+def test_a_pair_too_short_to_compare_is_not_called_a_tie():
+    """A tie is a claim, and ten shared notes cannot support one."""
+    leader = with_predictions(make_run("leader", 0.9), [str(i) for i in range(200)], True)
+    tiny = with_predictions(make_run("tiny", 0.88), [str(i) for i in range(10)], True)
+
+    block = reporting.summary_block([leader, tiny])
+    assert "(tied)" not in block
 
 
 def test_the_summary_replaces_only_what_is_between_the_markers():
