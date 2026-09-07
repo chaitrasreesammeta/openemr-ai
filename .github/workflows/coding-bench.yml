@@ -341,6 +341,22 @@ jobs:
               continue
             fi
             echo "::group::$line"
+            # The cheap question, asked before anything is deployed or loaded.
+            # The prediction cache answers "has this note been paid for" only
+            # after a container has started and a dataset has loaded, and it
+            # re-infers any note it misses. A push whose real work was four new
+            # cells once walked twelve settled ones and re-inferred 383 notes
+            # across them for $1.90 it did not need to spend. If a committed
+            # record already covers this configuration at this adapter hash and
+            # these parameters, and passed the failure ceiling, read the number
+            # off the record and move on. confirm_full_rerun overrides it.
+            if [ "${{ inputs.confirm_full_rerun }}" != "true" ] \
+               && python -m coding_bench.bench.settled \
+                    --task "$task" --model "$model" --space "$space" \
+                    --max-tokens "$max_tokens"; then
+              echo "::endgroup::"
+              continue
+            fi
             # max_tokens is per configuration and is in the cache key: a
             # different value misses every note and pays again for work already
             # done.

@@ -402,6 +402,18 @@ off the volume into git. A change to the prompt or to the gold manifests
 invalidates every model's cache, so `evaluate` refuses to do that from a push
 and asks for a dispatch with `confirm_full_rerun`.
 
+**A settled configuration is skipped before anything starts.** Before each cell
+in the run set, `bench/settled.py` asks whether a committed record already
+covers it at the current adapter hash and the same parameters, and whether that
+record passed the failure ceiling. If it does, the cell is skipped outright: no
+container, no dataset load, no calls. This is deliberately a different question
+from the prediction cache below, which can only answer per note after a run has
+already begun, and which re-infers anything it misses. A push whose only real
+work was four new Qwen3.8 cells once walked twelve settled ones and re-inferred
+383 notes across them, 139 on qwen3.6 and 244 on gpt-oss, for $1.90 and about
+ninety minutes it did not need to spend. A quarantined record does not settle
+anything, and `confirm_full_rerun` overrides the whole check.
+
 **Neither job re-runs inference that has already been paid for.** A note is
 regenerated only when something that can change its answer changed: the gold
 manifest checksum, the model, the adapter, the prompt, the offered candidates or
