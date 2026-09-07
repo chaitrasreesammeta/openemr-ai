@@ -61,6 +61,9 @@ image = (
 # that the provenance of any number is answerable after the fact.
 EXTERNAL_PROVIDERS = {
     "qwen3.6-27b": "groq",
+    # Was self hosted on vLLM, where the note text never left Modal. On Groq it
+    # does, which is why it moves into this list rather than staying silent.
+    "qwen3.8-27b": "groq",
     "gpt-oss-120b": "groq",
     # A second provider, and a second clearance question. See the governance
     # note at the top of adapters/api_anthropic.py before running this one.
@@ -77,10 +80,10 @@ ADAPTER_FILES = {
     "muse-glimmer-30b": "modal_muse.py",
     "gemma4-26b-a4b-gguf": "modal_gemma4_gguf.py",
     "sonnet-5": "api_anthropic.py",
-    # The FP8 release, self hosted on vLLM. Qwen also publishes bf16 weights and
-    # this package deliberately does not serve them; the reasoning is at the top
-    # of the adapter.
-    "qwen3.8-27b-fp8": "modal_qwen38_vllm.py",
+    # Its own file rather than a third line in api_groq.py, so that adding it
+    # does not invalidate the cached notes of the two models already there. The
+    # reasoning, and what that costs, is at the top of the adapter.
+    "qwen3.8-27b": "api_groq_qwen38.py",
 }
 
 # Everything with an adapter that is not reached over someone else's API, which
@@ -176,19 +179,25 @@ def build_predictor(
         # Quantised, and named as such in the run manifest, for the same reason
         # the Muse GGUF is: a QAT 4 bit build is not the released model.
         client = Gemma4GGUFClient(reasoning_strength=reasoning_strength)
-    elif model == "qwen3.8-27b-fp8":
-        from coding_bench.adapters.modal_qwen38_vllm import Qwen38Client
+    elif model == "qwen3.8-27b":
+        from coding_bench.adapters.api_groq_qwen38 import QWEN_3_8_27B
 
-        # On this adapter reasoning_strength drives the model's own thinking
-        # switch rather than a line prepended to the system prompt, because this
-        # model has a real switch and the llama.cpp adapters do not. The default
-        # of "medium" therefore thinks, which is what the Qwen3.6 row on the
-        # board was measured doing. See the header of modal_qwen38_vllm.py.
-        client = Qwen38Client(reasoning_strength=reasoning_strength)
+        # Groq decides how this model thinks, so reasoning_strength has nothing
+        # to drive here and is not passed: on the vLLM build it set the model's
+        # own `enable_thinking` switch, and inventing an equivalent out of a
+        # prompt line would be a decoder difference dressed up as a setting.
+        # `reasoning_effort` on GroqClient is the real lever if the 16,384
+        # ceiling turns out to be tight, and it is left unset so this row starts
+        # where the qwen3.6 row beside it starts.
+        client = GroqClient(model_id=QWEN_3_8_27B)
     else:
         raise ValueError(
             f"Unknown model {model!r}. Known: "
-            f"{sorted(GROQ_MODELS) + sorted(ANTHROPIC_MODELS) + sorted(LOCAL_MODELS)}"
+            # ADAPTER_FILES rather than the three lists it is derived from: a
+            # model reached over HTTP from its own adapter file, as qwen3.8-27b
+            # is, belongs to none of them and would be missing from this list at
+            # exactly the moment someone is reading it to find the right name.
+            f"{sorted(ADAPTER_FILES)}"
         )
 
     llm = LLMPredictor(client=client, code_system=code_system, max_tokens=max_tokens)

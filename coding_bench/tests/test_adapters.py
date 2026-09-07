@@ -293,322 +293,105 @@ def test_anthropic_is_recorded_as_a_second_external_provider():
 #
 # Everything below guards the same thing, which is not correctness. The adapter
 # can be entirely correct and still produce a number that cannot be read next to
-# the rest of the board, and nothing fails when that happens: the chain runs, the
-# records bank, the leaderboard tabulates, and a difference in serving lands in
-# the table looking like a difference in models. These are the only place that
-# error is detectable.
+# the rest of the board, and nothing fails when that happens: the run banks, the
+# leaderboard tabulates, and a difference in serving lands in the table looking
+# like a difference in models. These are the only place that error is
+# detectable.
+#
+# This model was self hosted on vLLM at fp8 and now runs on Groq. The tests that
+# guarded the serving build, the KV cache dtype, the slot count and the thinking
+# switch went with it: none of those are ours to set any more, which is itself
+# the thing the first test below records.
 
 
-def test_qwen38_is_registered_and_self_hosted():
-    assert ADAPTER_FILES["qwen3.8-27b-fp8"] == "modal_qwen38_vllm.py"
-    # It may not claim an outside provider saw the note text. It runs on our own
-    # GPU, which is the point of having it.
-    assert "qwen3.8-27b-fp8" in LOCAL_MODELS
-    assert EXTERNAL_PROVIDERS.get("qwen3.8-27b-fp8") is None
+def test_qwen38_is_registered_as_a_hosted_model():
+    assert ADAPTER_FILES["qwen3.8-27b"] == "api_groq_qwen38.py"
+    # The inverse of what this asserted while the model was self hosted. Note
+    # text now leaves Modal for Groq, and a row that does not say so is a
+    # provenance claim the run manifest would repeat.
+    assert EXTERNAL_PROVIDERS["qwen3.8-27b"] == "groq"
+    assert "qwen3.8-27b" not in LOCAL_MODELS
 
 
-def test_only_the_fp8_build_is_reachable():
-    """Qwen publishes bf16 weights too, and this package does not serve them.
+def test_the_fp8_build_is_no_longer_reachable():
+    """The self hosted arm is gone rather than dormant.
 
-    Removed rather than registered and left unqueued, so there is no path by
-    which a bf16 number reaches the board without somebody rewriting the adapter
-    and re-reading the argument for why FP8 is the build that gets a row.
+    Left registered and unqueued it would be a second Qwen3.8 row that anyone
+    could launch, measured on a different stack at a precision this one cannot
+    name, and the two would tabulate as though they were one model.
     """
-    from coding_bench.adapters import modal_qwen38_vllm as qwen38
-
-    assert qwen38.CHECKPOINT == "Qwen/Qwen3.8-27B-FP8"
-    assert not hasattr(qwen38, "BF16_CHECKPOINT")
-    assert not hasattr(qwen38, "Qwen38BF16")
-    assert qwen38.Qwen38Client.model_id == qwen38.CHECKPOINT
-    # No bf16 model id survives in the registry either.
-    assert not [model for model in ADAPTER_FILES if model.endswith("bf16")]
-
-    # The served checkpoint appears in the argv exactly where the id says it is.
-    command = qwen38.server_command()
-    assert command[:3] == ["vllm", "serve", qwen38.CHECKPOINT]
-    assert command[command.index("--served-model-name") + 1] == qwen38.CHECKPOINT
+    assert "qwen3.8-27b-fp8" not in ADAPTER_FILES
+    assert "qwen3.8-27b-fp8" not in EXTERNAL_PROVIDERS
+    assert not (Path(ADAPTER_DIR) / "modal_qwen38_vllm.py").exists()
 
 
-def test_the_kv_cache_is_not_quantised():
-    """The id on this row says fp8 weights, and only weights.
+def test_the_id_is_the_catalogue_id_and_carries_no_build_tag():
+    """Groq does not publish its serving precision, so the id claims none.
 
-    vLLM's own recipe for this model passes `--kv-cache-dtype fp8`, so this is
-    the flag most likely to be switched on by somebody copying it. Doing that
-    would make the row a build Qwen never published, quantised in a second place
-    that nothing here has measured, still labelled with the released id.
+    The fp8 row could name its build because the weights were loaded here and
+    the load was verified. This one cannot, and inventing a tag would be a claim
+    about somebody else's stack.
     """
-    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+    from coding_bench.adapters import api_groq_qwen38 as qwen38
 
-    args = qwen38.SERVER_ARGS
-    assert args[args.index("--kv-cache-dtype") + 1] == "auto"
-    assert "--model" not in args, "the checkpoint belongs to server_command, not the shared args"
+    assert qwen38.QWEN_3_8_27B == "qwen/qwen3.8-27b"
+    assert ":" not in qwen38.QWEN_3_8_27B.split("/", 1)[1]
 
 
-def test_the_vllm_and_transformers_pins_are_mutually_satisfiable():
-    """They were not, and it cost a launch.
+def test_qwen38_stays_out_of_the_shared_groq_adapter():
+    """The separate file is a cost decision, and this is what protects it.
 
-    The model's vLLM recipe states a floor of 0.17.0 and, separately, that it
-    needs transformers >= 5.8.0 because that is what wrote its config.json.
-    Pinning the floor as a version asks for both at once, and vLLM 0.17.0
-    requires `transformers<5`, so pip returned ResolutionImpossible and the
-    image never built.
-
-    0.24.0 is the first vLLM to require `transformers>=5.5.3` outright. Below it
-    the constraint is either that hard `<5` cap or, from 0.20 to 0.23, a list of
-    exclusions across the 5.x line. Nothing here may reach PyPI, so what is
-    asserted is the floor, and the reason it exists is written down.
+    `api_groq.py` is in the cache key of `qwen3.6-27b` and `gpt-oss-120b`, and
+    CI re-runs any model whose adapter file changed. Moving this model into it
+    would silently re-infer eight banked cells on the next push, two of them 578
+    note ICD-10 runs. Nothing else would notice: the suite would stay green and
+    the bill would arrive later.
     """
-    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+    from coding_bench.adapters import api_groq
 
-    def parts(version: str) -> tuple[int, ...]:
-        return tuple(int(piece) for piece in version.split("."))
-
-    assert parts(qwen38.VLLM_VERSION) >= (0, 24, 0), (
-        "vLLM below 0.24.0 does not permit the transformers 5.x this model's processor needs"
-    )
-    assert parts(qwen38.TRANSFORMERS_VERSION) >= (5, 8, 0)
-
-    # And both actually reach the image, or pinning them is decoration.
-    source = Path(qwen38.__file__).read_text(encoding="utf8")
-    assert 'f"vllm=={VLLM_VERSION}"' in source
-    assert 'f"transformers>={TRANSFORMERS_VERSION}"' in source
+    assert "qwen3.8-27b" not in api_groq.MODELS
+    assert ADAPTER_FILES["qwen3.6-27b"] == "api_groq.py"
+    assert ADAPTER_FILES["gpt-oss-120b"] == "api_groq.py"
+    assert ADAPTER_FILES["qwen3.8-27b"] != ADAPTER_FILES["qwen3.6-27b"]
 
 
-def test_note_text_cannot_reach_the_server_log():
-    """Tier 2 text stays inside Modal, and a log is outside enough to matter.
+def test_the_token_ceiling_is_the_providers_and_not_a_preference():
+    """16,384 is what Groq allows, which is exactly what the board asks for.
 
-    The flag is asserted by its current name. `--disable-log-requests` is what
-    older vLLM called this, it is gone in 0.27.1, and passing it made `vllm
-    serve` exit at argument parsing and crash-loop a GPU container for 22
-    minutes. Its replacement is `--enable-log-requests`, defaulting to false,
-    and the negation is passed rather than the default relied on, because
-    whether restricted notes are logged should be stated by the command.
+    Every self hosted row here could buy headroom by raising the budget, and the
+    Gemma 4 row did. This one cannot, so the number is recorded next to the
+    model rather than left implicit in a chain file, and a future run that wants
+    more has to confront that it is asking for something the provider will clamp.
     """
-    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+    from coding_bench.adapters import api_groq_qwen38 as qwen38
 
-    assert "--no-enable-log-requests" in qwen38.SERVER_ARGS
-    assert "--disable-log-requests" not in qwen38.SERVER_ARGS, "removed in vLLM 0.27.1"
-    # And never the bare form, which would turn logging on.
-    assert "--enable-log-requests" not in qwen38.SERVER_ARGS
+    assert qwen38.MAX_COMPLETION_TOKENS == 16384
 
 
-def test_the_weights_are_fetched_before_the_server_launches():
-    """So an interrupted start keeps what it already pulled.
+def test_qwen38_reuses_the_client_the_other_groq_rows_use(monkeypatch):
+    """The truncation contract is tested once, on GroqClient, and inherited.
 
-    There was briefly a `_check_flags` in front of this that asked `vllm serve
-    --help` whether every flag was accepted. It could not parse the help output,
-    concluded that vLLM rejects `--max-model-len`, `--host` and `--port`, and
-    crash-looped a correct configuration for an hour. Detection was never the
-    gap: a bad flag makes the server exit at argument parsing and `_await_ready`
-    raises within seconds with the reason. The bound on Modal's restarts belongs
-    in the caller, and it is the smoke step's `timeout-minutes`.
+    A second client class here would need its own copy of those tests and would
+    drift from them, which is how a length stop stops raising and starts
+    scoring as an answer with no codes.
     """
-    from coding_bench.adapters import modal_qwen38_vllm as qwen38
+    import sys
+    import types
 
-    source = Path(qwen38.__file__).read_text(encoding="utf8")
-    body = source.split("def start_server(self):")[1].split("    def ")[0]
-    assert body.index("_fetch_weights") < body.index("Popen")
-    assert "_check_flags" not in body, "the flag preflight blocked a working config"
+    from coding_bench.adapters.api_groq import GroqClient
+    from coding_bench.adapters.api_groq_qwen38 import qwen38_client
 
+    # `groq` is an optional extra and public CI installs [dev,modal,anthropic]
+    # without it, while the client imports it inside __init__. A stub module
+    # keeps this test about the wiring rather than about the dependency.
+    stub = types.ModuleType("groq")
+    stub.Groq = lambda **kwargs: object()
+    monkeypatch.setitem(sys.modules, "groq", stub)
 
-def test_the_weights_are_committed_to_the_volume():
-    """A Modal volume keeps nothing until something commits it.
-
-    Letting vLLM download implicitly looks equivalent and is not: a start that
-    is interrupted takes the whole 27 GB with it and the next one pays again.
-    Both llama.cpp adapters in this package already download and commit, and
-    this one was the outlier.
-    """
-    from coding_bench.adapters import modal_qwen38_vllm as qwen38
-
-    source = Path(qwen38.__file__).read_text(encoding="utf8")
-    assert "snapshot_download(" in source
-    assert "model_cache.commit()" in source
-
-
-def test_thinking_rides_on_the_recorded_run_parameter():
-    """So the mode a number was produced under is in the manifest, not in a default.
-
-    reasoning_strength is already carried in every run manifest and in the
-    prediction cache key. Introducing a separate thinking flag would put the
-    mode outside both, and two runs that decoded differently would then share a
-    cache entry.
-    """
-    from coding_bench.adapters.modal_qwen38_vllm import thinking_enabled
-
-    assert thinking_enabled("none") is False
-    assert thinking_enabled("off") is False
-    assert thinking_enabled("") is False
-    assert thinking_enabled(None) is False
-    assert thinking_enabled("high") is True
-    # The package default, and therefore the mode the board's row is measured
-    # in. See the next test for why that is the one that matters.
-    assert thinking_enabled("medium") is True
-
-
-def test_the_chain_thinks_because_the_model_it_is_compared_against_thinks():
-    """The equivalence that is easiest to lose and hardest to notice afterwards.
-
-    Qwen3.6 27B is the nearest row on the board, same family and same size, and
-    Groq serves it as a reasoning model. An instruct mode Qwen3.8 measured
-    against it would report a decoder difference as a model difference, and
-    would flatter the newer model on latency at the same time. Nothing about a
-    run record would look wrong.
-    """
-    from coding_bench.adapters.modal_qwen38_vllm import thinking_enabled
-    from coding_bench import run_chain_qwen38 as chain
-
-    assert thinking_enabled(chain.DEFAULTS["reasoning_strength"])
-    for step in chain.CHAIN:
-        assert thinking_enabled(step.get("reasoning_strength", chain.DEFAULTS["reasoning_strength"]))
-
-
-def test_the_chain_asks_for_exactly_as_many_notes_as_the_server_has_slots():
-    """A mismatch here is silent, which is what makes it worth a test.
-
-    Ask for more than the server has slots and the surplus queues at the door
-    instead of widening the batch, so latency per note climbs for no throughput.
-    Ask for fewer and slots sit idle. Either way the run completes and every
-    accuracy column is correct, and only the latency column is quietly wrong.
-    """
-    from coding_bench.adapters.modal_qwen38_vllm import MAX_NUM_SEQS
-    from coding_bench import run_chain_qwen38 as chain
-
-    assert chain.CONCURRENCY == MAX_NUM_SEQS
-    assert chain.DEFAULTS["concurrency"] == MAX_NUM_SEQS
-
-
-def test_the_slot_count_leaves_room_for_the_weights_and_then_some():
-    """The batch width is the one setting not held to what the other rows used.
-
-    KV here is 64 KB a token: only 16 of the 64 layers hold a cache, at 4 KV
-    heads by 256 dims, because the other 48 are Gated DeltaNet with constant
-    state. Slots times context times that is the cache, and it has to sit beside
-    27 GB of fp8 weights inside the 0.90 of a 96 GB card vLLM will use.
-
-    The headroom left over is not slack. Prefill activations at a 19,130 token
-    prompt, the vision tower and cuda graph capture all come out of it, and none
-    of them appear in this arithmetic. The assertion is that the two terms it
-    can compute leave a real margin, so raising the slot count has to be a
-    decision rather than an edit to a comment.
-    """
-    from coding_bench.adapters import modal_qwen38_vllm as qwen38
-
-    kv_bytes_per_token = 2 * 4 * 256 * 2 * 16
-    kv_gb = qwen38.MAX_NUM_SEQS * qwen38.MAX_MODEL_LEN * kv_bytes_per_token / 1e9
-    weights_gb = 27
-    usable_gb = 96 * qwen38.GPU_MEMORY_UTILISATION
-
-    assert kv_gb + weights_gb < usable_gb * 0.85, (
-        f"{qwen38.MAX_NUM_SEQS} slots is {kv_gb:.0f}GB of KV, which with the weights "
-        f"is {kv_gb + weights_gb:.0f}GB of {usable_gb:.0f}GB usable and leaves too "
-        f"little for prefill activations and graph capture"
-    )
-
-
-def test_the_chain_runs_the_fp8_build_on_every_condition_the_board_compares_on():
-    """Four conditions, because a partial row cannot be ranked against a full one.
-
-    And the FP8 build, which is the only one this package serves: every self
-    hosted row on the board is a deployment build, `full` is the deployment
-    condition, and no hosted provider here publishes the precision a bf16 row
-    would supposedly be matching.
-    """
-    from coding_bench import run_chain_qwen38 as chain
-
-    assert {step["model"] for step in chain.CHAIN} == {"qwen3.8-27b-fp8"}
-    assert {(step["task"], step["candidate_space"]) for step in chain.CHAIN} == {
-        ("cpt", "gold"), ("cpt", "full"), ("icd10", "gold"), ("icd10", "full"),
-    }
-    # In the cache key, so a different value is not just incomparable with the
-    # board's other runs, it also misses every cached note and pays again.
-    assert chain.DEFAULTS["max_tokens"] == 16384
-
-
-def test_the_watch_catches_the_builtin_timeout_and_not_modals():
-    """Modal exports a TimeoutError that is not a subclass of the builtin one.
-
-    `FunctionCall.get(timeout=...)` raises the builtin when the wait expires.
-    Catching `modal.exception.TimeoutError` instead would read as the more
-    careful choice, would never fire, and would turn every run that outlasts the
-    watch into a failed CI job. The chain is a spawn and survives the watch, so
-    that failure would be entirely cosmetic and entirely misleading.
-    """
-    from modal.exception import TimeoutError as ModalTimeoutError
-    from coding_bench import run_chain_qwen38 as chain
-
-    assert not issubclass(ModalTimeoutError, TimeoutError), (
-        "modal now aliases the builtin, so the catch below can be simplified"
-    )
-    source = Path(chain.__file__).read_text(encoding="utf8")
-    assert "except (TimeoutError, OutputExpiredError)" in source
-    assert "from modal.exception import TimeoutError" not in source
-
-
-def build_qwen38_client(reasoning_strength: str = "medium", **response):
-    """A client wired to a stub, without constructing a Modal handle."""
-    from coding_bench.adapters.modal_qwen38_vllm import Qwen38Client, thinking_enabled
-
-    client = object.__new__(Qwen38Client)
-    client.temperature = 0.0
-    client.reasoning_strength = reasoning_strength
-    client.enable_thinking = thinking_enabled(reasoning_strength)
-    stub = StubRemote(**response)
-    client._remote = stub
-    return client, stub
-
-
-def test_a_cut_off_generation_raises_rather_than_scoring_as_no_codes():
-    """The failure this configuration actually has.
-
-    Greedy decoding in thinking mode is what Qwen warns about, and a looping
-    trace hits the cap with no JSON ever produced. Returning that as an empty
-    completion would score it as the model correctly finding nothing, and the
-    truncation rate that should quarantine the run would never be visible.
-    """
-    client, _ = build_qwen38_client(
-        message={"content": '{"codes": [{"code": "I10", "quo'},
-        stop_reason="length",
-        latency_s=120.0,
-        usage={"prompt_tokens": 11000, "completion_tokens": 16384},
-    )
-    with pytest.raises(Truncated) as raised:
-        client.complete("system", "user", max_tokens=16384)
-    assert raised.value.produced_tokens == 16384
-    assert raised.value.model_id == "Qwen/Qwen3.8-27B-FP8"
-
-
-def test_the_answer_is_read_out_of_the_reasoning_channel():
-    """`--reasoning-parser qwen3` splits the channels, so the same rule applies.
-
-    This is not hypothetical on a thinking model. It cost 124 of 312 notes on
-    Gemma 4 and 120 of 150 on Muse, each one scored as an empty prediction.
-    """
-    client, _ = build_qwen38_client(
-        message={
-            "role": "assistant",
-            "content": "",
-            "reasoning_content": '{"codes": [{"code": "I10", "quote": "hypertension"}]}',
-        },
-        stop_reason="stop",
-        latency_s=40.0,
-        usage={"prompt_tokens": 11000, "completion_tokens": 900},
-    )
-    assert "I10" in client.complete("system", "user", max_tokens=16384).text
-
-
-def test_the_qwen38_run_parameters_reach_the_server():
-    # Named for its model rather than reusing the gemma4 test's name. A second
-    # `def` of the same name silently replaces the first, so the shadowed test
-    # stops running and the suite still goes green with one fewer check.
-    client, stub = build_qwen38_client(
-        message={"content": "{}"}, stop_reason="stop", latency_s=1.0, usage={},
-    )
-    client.complete("a system prompt", "a user prompt", max_tokens=16384)
-    call = stub.calls[0]
-    assert call["max_tokens"] == 16384
-    assert call["temperature"] == 0.0, "greedy, so a rerun reproduces the run"
-    assert call["enable_thinking"] is True, "thinking, matching the Qwen3.6 row"
+    client = qwen38_client(api_key="not-a-real-key")
+    assert isinstance(client, GroqClient)
+    assert client.model_id == "qwen/qwen3.8-27b"
+    assert client.temperature == 0.0, "greedy, so a rerun reproduces the run"
 
 
 def test_candidate_caching_approaches_are_pinned_to_one_thread():

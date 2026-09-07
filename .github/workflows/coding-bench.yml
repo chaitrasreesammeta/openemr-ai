@@ -50,9 +50,9 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'evaluate the hosted set, launch the GPU chain, or collect finished detached runs'
+        description: 'evaluate the hosted set, or collect finished detached runs'
         type: choice
-        options: [evaluate, launch-gpu, collect]
+        options: [evaluate, collect]
         default: evaluate
       only:
         description: 'substring filter over the run set, e.g. sonnet or icd10. Empty runs all.'
@@ -60,10 +60,6 @@ on:
         default: ''
       confirm_full_rerun:
         description: 'required when the prompt or gold set changed; re-runs every model'
-        type: boolean
-        default: false
-      confirm_gpu_rerun:
-        description: 'required to re-launch a GPU chain whose records are already banked'
         type: boolean
         default: false
       concurrency:
@@ -300,10 +296,10 @@ jobs:
           echo "No global cache invalidation in this change."
 
       - name: Evaluate the run set
-        # Not on a launch-gpu or collect dispatch. Both are about the GPU chain
-        # and neither has any reason to walk the hosted set, which on a cache
-        # hit is still twelve container starts.
-        if: inputs.action != 'collect' && inputs.action != 'launch-gpu'
+        # Not on a collect dispatch, which is about banking a detached chain
+        # and has no reason to walk the hosted set, on a cache hit still a
+        # container start per configuration.
+        if: inputs.action != 'collect'
         env:
           PYTHONPATH: ${{ github.workspace }}
           # Every configuration on the leaderboard that is reached over HTTP.
@@ -322,6 +318,10 @@ jobs:
             icd10 sonnet-5      full 16384
             cpt   sonnet-5      gold 16384
             cpt   sonnet-5      full 16384
+            icd10 qwen3.8-27b   gold 16384
+            icd10 qwen3.8-27b   full 16384
+            cpt   qwen3.8-27b   gold 16384
+            cpt   qwen3.8-27b   full 16384
         run: |
           set -o pipefail
           only="${{ inputs.only }}"
@@ -563,294 +563,4 @@ jobs:
         with:
           name: coding-bench-results
           path: /tmp/coding-bench-results.tar.gz
-          if-no-files-found: warn
-
-  launch_gpu:
-    # The GPU chain, launched from the commit that adds it and banked when it
-    # finishes, so a self hosted model reaches the board without anybody having
-    # to remember to come back for it.
-    #
-    # Not part of `evaluate`, and not a line in its RUN_SET, because the two are
-    # different in kind. A hosted configuration is an HTTP call against a cache
-    # that usually hits. This deploys a container that holds a GPU for hours, it
-    # needs `modal deploy` first, which `evaluate` never does, and it needs to be
-    # gated on more than a green test suite.
-    #
-    # After `evaluate` rather than beside it, so the two cannot race each other's
-    # commit. Both write coding_bench/results on the same ref, and `evaluate` on
-    # a cache hit is minutes.
-    needs: [checks, evaluate]
-    # `always()` makes `evaluate` an ordering constraint rather than a
-    # precondition. This chain does not depend on the hosted set in any way, it
-    # only must not commit at the same time as it, so a Groq rate limit should
-    # not cost a GPU run. `checks` is a real precondition and is therefore
-    # asserted by hand: without that clause `always()` would let a red test
-    # suite buy hours of GPU time, which is the exact thing `needs: checks`
-    # exists to prevent.
-    if: >-
-      always()
-      && needs.checks.result == 'success'
-      && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    # Just under the six hour ceiling a hosted runner has. The chain estimate is
-    # three to six hours, so this will sometimes be the thing that ends the
-    # watch, which is why `run_now` treats its own timeout as an ordinary return
-    # and why the collect step below runs even then. The chain is a spawn against
-    # a deployed app and does not stop when this job does.
-    timeout-minutes: 350
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Decide whether there is anything to launch
-        id: decide
-        # Two ways in. A dispatch of `action: launch-gpu` always launches. A push
-        # launches only when it touched the adapter or the chain, because those
-        # are exactly the changes that invalidate this model's cache: the adapter
-        # file hash is part of the prediction cache key, so editing it means every
-        # note is paid for again. A push that only edits the README must not buy
-        # six hours of GPU.
-        run: |
-          if [ "${{ inputs.action }}" = "launch-gpu" ]; then
-            echo "launch=true" >> "$GITHUB_OUTPUT"
-            echo "Dispatched explicitly."
-            exit 0
-          fi
-          if [ "${{ github.event_name }}" != "push" ]; then
-            echo "launch=false" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          base="${{ github.event.before }}"
-          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] \
-             || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            base="HEAD~1"
-          fi
-          changed=$(git diff --name-only "$base" HEAD 2>/dev/null || true)
-          if echo "$changed" | grep -qE 'coding_bench/(adapters/modal_qwen38_vllm\.py|run_chain_qwen38\.py)'; then
-            echo "launch=true" >> "$GITHUB_OUTPUT"
-            echo "The Qwen3.8 adapter or chain changed, so its cached notes are invalid."
-          else
-            echo "launch=false" >> "$GITHUB_OUTPUT"
-            echo "Nothing in this change touches the Qwen3.8 chain."
-          fi
-
-      - name: Refuse to re-buy a chain that is already banked
-        if: steps.decide.outputs.launch == 'true' && inputs.confirm_gpu_rerun != true
-        # A comment edit in the adapter changes its hash, invalidates every
-        # cached note, and would otherwise quietly spend the whole chain again.
-        # The first launch passes this freely because there is nothing to lose
-        # yet. Every one after it is somebody's decision, the same way
-        # `confirm_full_rerun` guards the hosted set.
-        run: |
-          if ls coding_bench/results/runs/*Qwen-Qwen3.8-27B-FP8*.json >/dev/null 2>&1; then
-            echo "::error::Qwen3.8 27B FP8 records are already committed, and this change invalidates their cache, so launching would pay for the whole chain again. Dispatch with action: launch-gpu and confirm_gpu_rerun: true if that is what you want."
-            exit 1
-          fi
-          echo "No Qwen3.8 records banked yet, so this is the first run."
-
-      - name: Set up Python
-        if: steps.decide.outputs.launch == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install
-        if: steps.decide.outputs.launch == 'true'
-        run: pip install -e './coding_bench[dev,modal,anthropic]'
-
-      - name: Authenticate Modal
-        if: steps.decide.outputs.launch == 'true'
-        env:
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
-
-      - name: Deploy the server and the chain
-        if: steps.decide.outputs.launch == 'true'
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        # Both, and in this order. The chain reaches the server by name at call
-        # time, so a chain deployed against a server that is not there fails on
-        # its first note with a GPU container already up.
-        run: |
-          set -o pipefail
-          modal deploy coding_bench/adapters/modal_qwen38_vllm.py 2>&1 | tee -a /tmp/gpu.log
-          modal deploy coding_bench/run_chain_qwen38.py 2>&1 | tee -a /tmp/gpu.log
-
-      - name: Smoke the server before spending a chain on it
-        if: steps.decide.outputs.launch == 'true'
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        # Two requests and the startup report. A wrong vLLM version, an
-        # architecture it will not serve, or an fp8 kernel that fell back to
-        # bf16 all show up here, and finding any of them at note one of 578
-        # costs the whole queue.
-        #
-        # The timeout is the bound on a crash-looping container, and it is here
-        # rather than in the adapter on purpose. A bad serving flag makes `vllm
-        # serve` exit at argument parsing and the adapter raises within seconds
-        # with the reason, but Modal keeps restarting the container while a
-        # caller waits, which once ran for 22 minutes. 40 minutes is generous
-        # for a genuine first start, which pulls 27 GB and then initialises an
-        # engine, and it is a hard ceiling on churn. An adapter side guard was
-        # tried for this and removed: it blocked a correct configuration.
-        timeout-minutes: 40
-        run: |
-          set -o pipefail
-          modal run coding_bench/adapters/modal_qwen38_vllm.py::smoke 2>&1 | tee -a /tmp/gpu.log
-
-      - name: Launch the chain and watch it
-        if: steps.decide.outputs.launch == 'true'
-        id: chain
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        # `run_now` spawns against the deployed app and then watches. The run
-        # belongs to Modal rather than to this runner, so cancelling the job or
-        # hitting its ceiling leaves the chain going with every finished step
-        # already committed to the results volume.
-        run: |
-          set -o pipefail
-          modal run coding_bench/run_chain_qwen38.py::run_now --timeout-s 18000 2>&1 | tee -a /tmp/gpu.log
-
-      - name: Collect whatever finished
-        # `always()`, and that is what makes the watch optional. A timed out
-        # watch, a cancelled job, even a failed step still leaves completed
-        # records on the volume, and banking three of four conditions beats
-        # banking none. Records already in the repo are skipped.
-        if: always() && steps.decide.outputs.launch == 'true'
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          set -o pipefail
-          modal run coding_bench/run_chain.py::fetch 2>&1 | tee -a /tmp/gpu.log
-
-      - name: Rescore and regenerate
-        if: always() && steps.decide.outputs.launch == 'true'
-        run: |
-          python -m coding_bench.bench.rescore
-          python -m coding_bench.bench.reporting
-
-      - name: Guard the records before committing
-        if: always() && steps.decide.outputs.launch == 'true'
-        run: |
-          git add -A coding_bench/results README.md
-          git diff --cached --name-only | xargs -r python coding_bench/scripts/check_restricted.py
-
-      - name: Commit results
-        if: always() && steps.decide.outputs.launch == 'true'
-        # The same rebase and retry as `evaluate`, for a sharper reason: a
-        # rejected push here strands hours of GPU time rather than a cache hit.
-        run: |
-          if git diff --cached --quiet; then
-            echo "Nothing to bank: no new records reached the volume."
-            exit 0
-          fi
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Bank coding_bench results from CI"
-          for attempt in 1 2 3; do
-            git fetch origin "${{ github.ref_name }}"
-            if ! git rebase --autostash "origin/${{ github.ref_name }}"; then
-              for generated in coding_bench/results/LEADERBOARD.md README.md; do
-                git checkout --ours "$generated" 2>/dev/null || true
-                git add "$generated" 2>/dev/null || true
-              done
-              unmerged=$(git diff --name-only --diff-filter=U)
-              if [ -n "$unmerged" ]; then
-                git rebase --abort
-                echo "::error::Conflicting run records, nothing pushed: $(echo "$unmerged" | tr '\n' ' '). The records are in the run artifact and nothing is lost; merge them by hand."
-                exit 1
-              fi
-              GIT_EDITOR=true git rebase --continue || {
-                echo "::error::Rebase failed. The records are in the run artifact and nothing is lost; commit them by hand."
-                exit 1
-              }
-            fi
-            python -m coding_bench.bench.reporting
-            git add -A coding_bench/results README.md
-            git diff --cached --quiet || git commit --amend --no-edit
-            if git push origin "HEAD:${{ github.ref_name }}"; then
-              exit 0
-            fi
-            echo "Push rejected, so someone landed a commit while this rebased. Attempt $attempt of 3."
-          done
-          echo "::error::Push kept being rejected. The records are in the run artifact and nothing is lost; commit them by hand."
-          exit 1
-
-      - name: Summary
-        if: always() && steps.decide.outputs.launch == 'true'
-        run: |
-          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import json, pathlib, re
-
-          log = pathlib.Path("/tmp/gpu.log")
-          text = log.read_text(encoding="utf8", errors="replace") if log.exists() else ""
-
-          print("## Coding Bench, Qwen3.8 27B FP8 chain")
-          print()
-          print("Watch outcome: ${{ steps.chain.outcome }}. The chain is a spawn against a "
-                "deployed app, so a timed out or cancelled watch does not stop it; anything "
-                "unfinished is banked by a later dispatch of `action: collect`.")
-          print()
-
-          # What vLLM decided to load. The whole latency column rests on this.
-          kernel = [l for l in text.splitlines()
-                    if re.search(r"quantization|fp8|dtype|kv cache", l, re.I)]
-          if kernel:
-              print("### What the server loaded")
-              print()
-              print("```")
-              print("\n".join(kernel[-12:]))
-              print("```")
-              print()
-
-          # Per step outcomes. The chain prints one JSON object per finished step.
-          steps = []
-          for line in text.splitlines():
-              match = re.search(r"^\[\d+/\d+\] done .*?: (\{.*\})$", line)
-              if match:
-                  try:
-                      steps.append(json.loads(match.group(1)))
-                  except json.JSONDecodeError:
-                      pass
-          if steps:
-              print("### Steps")
-              print()
-              print("| Step | n | Micro F1 | Tail F1 | Trunc | Errors | Latency | Banked as |")
-              print("|---|---:|---:|---:|---:|---:|---:|---|")
-              for s in steps:
-                  status = "result" if s.get("valid") else "**QUARANTINED**"
-                  print(f"| {s.get('step','')} | {s.get('n_notes','')} | {s.get('micro_f1','')} "
-                        f"| {s.get('tail_f1','')} | {s.get('truncation_rate','')} "
-                        f"| {s.get('error_rate','')} | {s.get('latency_mean_s','')}s | {status} |")
-              print()
-              if any(not s.get("valid") for s in steps):
-                  print("A quarantined step is not a score. Read `truncation_rate` first: "
-                        "greedy decoding in thinking mode is the configuration this is "
-                        "expected to fail in, and `max_tokens` is the first thing to raise.")
-                  print()
-          else:
-              print("_No step finished within the watch._")
-              print()
-
-          print(
-              "Full board: [LEADERBOARD.md](https://github.com/${{ github.repository }}/blob/"
-              "${{ github.ref_name }}/coding_bench/results/LEADERBOARD.md)"
-          )
-          PY
-
-      - name: Pack the results
-        if: always() && steps.decide.outputs.launch == 'true'
-        run: tar -czf /tmp/coding-bench-gpu-results.tar.gz --exclude=predictions -C coding_bench/results .
-
-      - name: Upload results
-        if: always() && steps.decide.outputs.launch == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coding-bench-gpu-results
-          path: /tmp/coding-bench-gpu-results.tar.gz
           if-no-files-found: warn
