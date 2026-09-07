@@ -309,9 +309,9 @@ The measurement it exists for is the **gold to full catalogue collapse**. Offeri
 
 | Task | Candidates | Best model | n | Micro F1 [95% CI] | Latency |
 |---|---|---|---:|---|---:|
-| cpt | full | Qwen3.6 27B | 312 | 0.843 [0.801, 0.886] | 4.2s |
-| icd10 | full | Qwen3.6 27B | 578 | 0.528 [0.512, 0.542] | 11.9s |
-| cpt | gold | Claude Sonnet 5 | 312 | 0.943 [0.923, 0.960] | 2.0s |
+| cpt | full | Qwen3.6 27B | 312 | 0.845 [0.802, 0.887] | 4.2s |
+| icd10 | full | Qwen3.6 27B | 578 | 0.523 [0.505, 0.539] | 12.4s |
+| cpt | gold | qwen/qwen3.8-27b | 312 | 0.950 [0.932, 0.966] | 0.2s |
 | icd10 | gold | Qwen3.6 27B | 578 | 0.815 [0.801, 0.829] | 6.6s |
 
 <!-- coding-bench-summary:end -->
