@@ -25,6 +25,33 @@ Nothing detects that; it has to be remembered, and the honest fix is the
 explicit per model `ADAPTER_VERSION` that would let all three share one file
 again without sharing one cache key.
 
+## Thinking is off by default here, and that is the trap
+
+The two Qwen rows have opposite defaults on Groq, which is measured rather than
+assumed: with no `reasoning_effort` the 3.6 endpoint thinks and the 3.8 endpoint
+does not. 3.6 accepts only `none` and `default` and rejects `low`/`medium`/`high`
+with a 400; 3.8 accepts all of them and needs one of the three to think at all.
+
+Leaving the field unset therefore does not put this row where the 3.6 row is, it
+puts it in instruct mode against a reasoning model, which reports a decoder
+difference as a model difference and flatters the newer model on latency while
+doing it. One set of runs was banked that way on 2026-09-07 and discarded.
+
+So `reasoning_strength`, the package's recorded run parameter, is mapped onto
+`reasoning_effort` here. It is already in the cache key, so changing it
+correctly re-runs, and it is already in the manifest, so what a row was measured
+at stays answerable.
+
+**`high` is measured broken on the full ICD-10 catalogue and must not be used
+there.** Over ten notes it averaged 16,084 completion tokens against a ceiling of
+16,384, truncated nine of ten, and returned empty content on all ten: it spends
+the entire budget thinking and never emits the answer. `medium` on the same ten
+averaged 6,057 with a longest of 14,704, no truncation and no empty content,
+which also puts it alongside the 3.6 row it is compared against, 4,944 tokens and
+12.4 seconds per note against 6,057 and 13.4. That measurement is one cell and
+ten notes, so it is a reason to default to `medium`, not a reason to believe
+`high` is broken everywhere.
+
 ## The token ceiling, which is the risk on this row
 
 Groq reports `max_completion_tokens` of 16,384 for this model. That is exactly
@@ -73,6 +100,36 @@ MODELS = {
 }
 
 
-def qwen38_client(**kwargs) -> GroqClient:
-    """Qwen3.8 27B behind the same client every other Groq row uses."""
-    return GroqClient(model_id=QWEN_3_8_27B, **kwargs)
+# The package's reasoning_strength, as Groq names it. A pass through rather than
+# a translation, kept explicit so an unknown strength fails loudly here instead
+# of silently reaching the API and coming back as a 400 mid run.
+REASONING_EFFORT = {
+    "none": "none",
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+}
+
+
+def reasoning_effort_for(reasoning_strength: str) -> str:
+    """Groq's effort level for a package reasoning strength."""
+    try:
+        return REASONING_EFFORT[reasoning_strength]
+    except KeyError:
+        raise ValueError(
+            f"Unknown reasoning_strength {reasoning_strength!r} for {QWEN_3_8_27B}. "
+            f"Known: {sorted(REASONING_EFFORT)}"
+        ) from None
+
+
+def qwen38_client(reasoning_strength: str = "medium", **kwargs) -> GroqClient:
+    """Qwen3.8 27B behind the same client every other Groq row uses.
+
+    The default is the package default, and it is the one that thinks. Passing
+    nothing here is what produced the discarded instruct mode runs.
+    """
+    return GroqClient(
+        model_id=QWEN_3_8_27B,
+        reasoning_effort=reasoning_effort_for(reasoning_strength),
+        **kwargs,
+    )

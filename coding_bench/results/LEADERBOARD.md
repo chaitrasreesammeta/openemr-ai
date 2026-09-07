@@ -11,7 +11,6 @@ CI regenerates this file and fails if the committed copy differs.
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
 | Qwen3.6 27B | cpt | full | 312 | 0.845 [0.802, 0.887] | 0.527 | 0.924 | 0.573 | 0.846 | 0.0% | 4.2s |
 | Claude Sonnet 5 | cpt | full | 312 | 0.825 [0.776, 0.872] | 0.471 | 0.916 | 0.517 | 0.833 | 0.0% | 1.8s |
-| qwen/qwen3.8-27b | cpt | full | 312 | 0.804 [0.759, 0.846] | 0.523 | 0.868 | 0.583 | 0.769 | 0.0% | 1.0s |
 | GPT-OSS 120B | cpt | full | 312 | 0.785 [0.738, 0.828] | 0.498 | 0.858 | 0.544 | 0.731 | 0.0% | 1.4s |
 | Muse Glimmer 30B | cpt | full | 312 | 0.639 [0.584, 0.690] | 0.436 | 0.678 | 0.519 | 0.526 | 0.0% | 20.9s |
 
@@ -28,7 +27,6 @@ CI regenerates this file and fails if the committed copy differs.
 
 | Model | Task | Candidates | n | Micro F1 [95% CI] | Macro F1 | Head F1 | Tail F1 | Exact | Trunc | Latency |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---:|
-| qwen/qwen3.8-27b | cpt | gold | 312 | 0.950 [0.932, 0.966] | 0.742 | 0.984 | 0.816 | 0.901 | 0.0% | 0.2s |
 | Claude Sonnet 5 | cpt | gold | 312 | 0.947 [0.928, 0.962] | 0.737 | 0.982 | 0.806 | 0.894 | 0.0% | 1.6s |
 | Qwen3.6 27B | cpt | gold | 312 | 0.933 [0.911, 0.953] | 0.704 | 0.967 | 0.797 | 0.869 | 0.0% | 2.6s |
 | GPT-OSS 120B | cpt | gold | 312 | 0.929 [0.907, 0.948] | 0.704 | 0.963 | 0.797 | 0.862 | 0.0% | 0.8s |
@@ -41,7 +39,6 @@ CI regenerates this file and fails if the committed copy differs.
 | Qwen3.6 27B | icd10 | gold | 578 | 0.815 [0.801, 0.829] | 0.571 | 0.935 | 0.682 | 0.358 | 0.3% | 6.6s |
 | Claude Sonnet 5 | icd10 | gold | 578 | 0.813 [0.798, 0.827] | 0.570 | 0.924 | 0.692 | 0.349 | 0.0% | 3.9s |
 | GPT-OSS 120B | icd10 | gold | 578 | 0.792 [0.778, 0.804] | 0.559 | 0.915 | 0.679 | 0.260 | 0.0% | 2.4s |
-| qwen/qwen3.8-27b | icd10 | gold | 578 | 0.783 [0.763, 0.800] | 0.532 | 0.911 | 0.641 | 0.299 | 0.0% | 0.4s |
 | Muse Glimmer 30B | icd10 | gold | 150 | 0.706 [0.674, 0.736] | 0.510 | 0.720 | 0.662 | 0.247 | 0.0% | 96.2s |
 
 **Reading the candidate space.** `gold` offers only the note's correct codes, so precision is 1.000 by construction and the F1 is a recall ceiling, not a deployment estimate. `full` offers the whole catalogue and is the condition that predicts real behaviour. A number from one cannot be compared against a number from the other.
@@ -58,7 +55,6 @@ The tables above name the model; the exact id is what reproduces it. A quantised
 | Gemma 4 26B-A4B | GGUF QAT UD-Q4_K_XL, self-hosted llama.cpp | `google/gemma-4-26B-A4B-it:qat-UD-Q4_K_XL` |
 | GPT-OSS 120B | Groq API | `openai/gpt-oss-120b` |
 | Muse Glimmer 30B | GGUF dynamic K-quant, self-hosted llama.cpp | `meta-models/Muse-Glimmer-30B-GGUF:kquant-dynamic` |
-| qwen/qwen3.8-27b | n/a | `qwen/qwen3.8-27b` |
 | Qwen3.6 27B | Groq API | `qwen/qwen3.6-27b` |
 
 ## Quarantined runs
@@ -72,7 +68,6 @@ These runs exceeded the 5% failure ceiling. Failed notes score as empty predicti
 | Gemma 4 26B-A4B | cpt | gold | 312 | 5.1% | 5.1% | 0.710 |
 | Gemma 4 26B-A4B | cpt | gold | 312 | 5.4% | 5.4% | 0.730 |
 | Qwen3.6 27B | icd10 | full | 578 | 5.0% | 2.6% | 0.513 |
-| qwen/qwen3.8-27b | icd10 | full | 578 | 6.7% | 0.0% | 0.419 |
 
 ## Head to head
 
@@ -80,18 +75,6 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 
 | A | B | Candidates | n | Statistic | Delta (A - B) | 95% CI | Real? |
 |---|---|---|---:|---|---:|---|---|
-| qwen/qwen3.8-27b | Claude Sonnet 5 | gold | 312 | micro_f1 | +0.0034 | [-0.0087, +0.0158] | no |
-| qwen/qwen3.8-27b | Claude Sonnet 5 | gold | 312 | macro_f1 | +0.0052 | [-0.0444, +0.0679] | no |
-| qwen/qwen3.8-27b | Claude Sonnet 5 | gold | 312 | exact_match | +0.0064 | [-0.0160, +0.0288] | no |
-| qwen/qwen3.8-27b | Qwen3.6 27B | gold | 312 | micro_f1 | +0.0172 | [+0.0035, +0.0329] | **yes** |
-| qwen/qwen3.8-27b | Qwen3.6 27B | gold | 312 | macro_f1 | +0.0383 | [-0.0064, +0.0949] | no |
-| qwen/qwen3.8-27b | Qwen3.6 27B | gold | 312 | exact_match | +0.0321 | [+0.0064, +0.0578] | **yes** |
-| qwen/qwen3.8-27b | GPT-OSS 120B | gold | 312 | micro_f1 | +0.0208 | [+0.0051, +0.0372] | **yes** |
-| qwen/qwen3.8-27b | GPT-OSS 120B | gold | 312 | macro_f1 | +0.0383 | [-0.0276, +0.1020] | no |
-| qwen/qwen3.8-27b | GPT-OSS 120B | gold | 312 | exact_match | +0.0385 | [+0.0096, +0.0674] | **yes** |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.3978 | [+0.3223, +0.4825] | **yes** |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.5084 | [+0.3641, +0.5754] | **yes** |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | gold | 150 | exact_match | +0.5267 | [+0.4467, +0.6133] | **yes** |
 | Claude Sonnet 5 | Qwen3.6 27B | gold | 312 | micro_f1 | +0.0138 | [+0.0017, +0.0266] | **yes** |
 | Claude Sonnet 5 | Qwen3.6 27B | gold | 312 | macro_f1 | +0.0331 | [-0.0194, +0.0865] | no |
 | Claude Sonnet 5 | Qwen3.6 27B | gold | 312 | exact_match | +0.0256 | [+0.0032, +0.0481] | **yes** |
@@ -113,18 +96,12 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | Qwen3.6 27B | Claude Sonnet 5 | full | 312 | micro_f1 | +0.0199 | [-0.0018, +0.0410] | no |
 | Qwen3.6 27B | Claude Sonnet 5 | full | 312 | macro_f1 | +0.0558 | [-0.0067, +0.1070] | no |
 | Qwen3.6 27B | Claude Sonnet 5 | full | 312 | exact_match | +0.0128 | [-0.0064, +0.0353] | no |
-| Qwen3.6 27B | qwen/qwen3.8-27b | full | 312 | micro_f1 | +0.0408 | [+0.0041, +0.0798] | **yes** |
-| Qwen3.6 27B | qwen/qwen3.8-27b | full | 312 | macro_f1 | +0.0036 | [-0.0382, +0.1114] | no |
-| Qwen3.6 27B | qwen/qwen3.8-27b | full | 312 | exact_match | +0.0769 | [+0.0417, +0.1154] | **yes** |
 | Qwen3.6 27B | GPT-OSS 120B | full | 312 | micro_f1 | +0.0600 | [+0.0306, +0.0902] | **yes** |
 | Qwen3.6 27B | GPT-OSS 120B | full | 312 | macro_f1 | +0.0283 | [-0.0153, +0.0782] | no |
 | Qwen3.6 27B | GPT-OSS 120B | full | 312 | exact_match | +0.1154 | [+0.0769, +0.1571] | **yes** |
 | Qwen3.6 27B | Muse Glimmer 30B | full | 312 | micro_f1 | +0.2061 | [+0.1623, +0.2556] | **yes** |
 | Qwen3.6 27B | Muse Glimmer 30B | full | 312 | macro_f1 | +0.0904 | [+0.0396, +0.1498] | **yes** |
 | Qwen3.6 27B | Muse Glimmer 30B | full | 312 | exact_match | +0.3205 | [+0.2692, +0.3782] | **yes** |
-| Claude Sonnet 5 | qwen/qwen3.8-27b | full | 312 | micro_f1 | +0.0209 | [-0.0178, +0.0616] | no |
-| Claude Sonnet 5 | qwen/qwen3.8-27b | full | 312 | macro_f1 | -0.0521 | [-0.0897, +0.0531] | no |
-| Claude Sonnet 5 | qwen/qwen3.8-27b | full | 312 | exact_match | +0.0641 | [+0.0288, +0.1026] | **yes** |
 | Claude Sonnet 5 | GPT-OSS 120B | full | 312 | micro_f1 | +0.0401 | [+0.0059, +0.0741] | **yes** |
 | Claude Sonnet 5 | GPT-OSS 120B | full | 312 | macro_f1 | -0.0275 | [-0.0823, +0.0457] | no |
 | Claude Sonnet 5 | GPT-OSS 120B | full | 312 | exact_match | +0.1026 | [+0.0577, +0.1442] | **yes** |
@@ -137,39 +114,21 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | Qwen3.6 27B | GPT-OSS 120B | gold | 578 | micro_f1 | +0.0235 | [+0.0119, +0.0336] | **yes** |
 | Qwen3.6 27B | GPT-OSS 120B | gold | 578 | macro_f1 | +0.0117 | [-0.0042, +0.0358] | no |
 | Qwen3.6 27B | GPT-OSS 120B | gold | 578 | exact_match | +0.0986 | [+0.0675, +0.1246] | **yes** |
-| Qwen3.6 27B | qwen/qwen3.8-27b | gold | 578 | micro_f1 | +0.0324 | [+0.0178, +0.0463] | **yes** |
-| Qwen3.6 27B | qwen/qwen3.8-27b | gold | 578 | macro_f1 | +0.0387 | [+0.0149, +0.0620] | **yes** |
-| Qwen3.6 27B | qwen/qwen3.8-27b | gold | 578 | exact_match | +0.0588 | [+0.0260, +0.0900] | **yes** |
 | Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.0674 | [+0.0386, +0.0952] | **yes** |
 | Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.0668 | [+0.0319, +0.0987] | **yes** |
 | Qwen3.6 27B | Muse Glimmer 30B | gold | 150 | exact_match | +0.1200 | [+0.0667, +0.1800] | **yes** |
 | Claude Sonnet 5 | GPT-OSS 120B | gold | 578 | micro_f1 | +0.0215 | [+0.0107, +0.0321] | **yes** |
 | Claude Sonnet 5 | GPT-OSS 120B | gold | 578 | macro_f1 | +0.0110 | [-0.0017, +0.0358] | no |
 | Claude Sonnet 5 | GPT-OSS 120B | gold | 578 | exact_match | +0.0900 | [+0.0606, +0.1194] | **yes** |
-| Claude Sonnet 5 | qwen/qwen3.8-27b | gold | 578 | micro_f1 | +0.0304 | [+0.0177, +0.0442] | **yes** |
-| Claude Sonnet 5 | qwen/qwen3.8-27b | gold | 578 | macro_f1 | +0.0380 | [+0.0176, +0.0593] | **yes** |
-| Claude Sonnet 5 | qwen/qwen3.8-27b | gold | 578 | exact_match | +0.0502 | [+0.0173, +0.0813] | **yes** |
 | Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.0529 | [+0.0283, +0.0789] | **yes** |
 | Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.0542 | [+0.0264, +0.0772] | **yes** |
 | Claude Sonnet 5 | Muse Glimmer 30B | gold | 150 | exact_match | +0.1000 | [+0.0533, +0.1533] | **yes** |
-| qwen/qwen3.8-27b | GPT-OSS 120B | full | 312 | micro_f1 | +0.0192 | [-0.0183, +0.0586] | no |
-| qwen/qwen3.8-27b | GPT-OSS 120B | full | 312 | macro_f1 | +0.0247 | [-0.0623, +0.0670] | no |
-| qwen/qwen3.8-27b | GPT-OSS 120B | full | 312 | exact_match | +0.0385 | [-0.0064, +0.0834] | no |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | full | 312 | micro_f1 | +0.1653 | [+0.1172, +0.2177] | **yes** |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | full | 312 | macro_f1 | +0.0868 | [-0.0241, +0.1396] | no |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | full | 312 | exact_match | +0.2436 | [+0.1859, +0.3014] | **yes** |
-| GPT-OSS 120B | qwen/qwen3.8-27b | gold | 578 | micro_f1 | +0.0089 | [-0.0049, +0.0221] | no |
-| GPT-OSS 120B | qwen/qwen3.8-27b | gold | 578 | macro_f1 | +0.0270 | [-0.0046, +0.0487] | no |
-| GPT-OSS 120B | qwen/qwen3.8-27b | gold | 578 | exact_match | -0.0398 | [-0.0710, -0.0104] | **yes** |
 | GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.0523 | [+0.0255, +0.0788] | **yes** |
 | GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.0498 | [+0.0164, +0.0796] | **yes** |
 | GPT-OSS 120B | Muse Glimmer 30B | gold | 150 | exact_match | +0.0467 | [-0.0067, +0.1067] | no |
 | GPT-OSS 120B | Muse Glimmer 30B | full | 312 | micro_f1 | +0.1462 | [+0.1021, +0.1913] | **yes** |
 | GPT-OSS 120B | Muse Glimmer 30B | full | 312 | macro_f1 | +0.0621 | [-0.0074, +0.1256] | no |
 | GPT-OSS 120B | Muse Glimmer 30B | full | 312 | exact_match | +0.2051 | [+0.1538, +0.2596] | **yes** |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | gold | 150 | micro_f1 | +0.0212 | [-0.0103, +0.0535] | no |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | gold | 150 | macro_f1 | +0.0067 | [-0.0350, +0.0431] | no |
-| qwen/qwen3.8-27b | Muse Glimmer 30B | gold | 150 | exact_match | +0.0800 | [+0.0267, +0.1400] | **yes** |
 | Qwen3.6 27B | Claude Sonnet 5 | full | 578 | micro_f1 | +0.0093 | [-0.0079, +0.0268] | no |
 | Qwen3.6 27B | Claude Sonnet 5 | full | 578 | macro_f1 | +0.0316 | [+0.0113, +0.0508] | **yes** |
 | Qwen3.6 27B | Claude Sonnet 5 | full | 578 | exact_match | -0.0104 | [-0.0311, +0.0104] | no |
@@ -190,14 +149,6 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | Muse Glimmer 30B | GPT-OSS 120B | full | 578 | exact_match | -0.0069 | [-0.0260, +0.0121] | no |
 
 ## Frequency bands
-
-### qwen/qwen3.8-27b, cpt, candidates gold
-
-| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
-|---|---:|---:|---:|---:|---:|---:|
-| head | 10 | 251 | 1.000 | 0.968 | 0.984 | 0.953 |
-| torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
-| tail | 51 | 74 | 1.000 | 0.689 | 0.816 | 0.701 |
 
 ### Claude Sonnet 5, cpt, candidates gold
 
@@ -255,14 +206,6 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | torso | 147 | 1979 | 1.000 | 0.711 | 0.831 | 0.721 |
 | tail | 516 | 1032 | 1.000 | 0.529 | 0.692 | 0.520 |
 
-### qwen/qwen3.8-27b, cpt, candidates full
-
-| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
-|---|---:|---:|---:|---:|---:|---:|
-| head | 10 | 251 | 0.887 | 0.849 | 0.868 | 0.700 |
-| torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
-| tail | 51 | 74 | 0.698 | 0.500 | 0.583 | 0.488 |
-
 ### GPT-OSS 120B, icd10, candidates gold
 
 | Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
@@ -278,14 +221,6 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 | head | 10 | 251 | 0.900 | 0.821 | 0.858 | 0.735 |
 | torso | 0 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
 | tail | 51 | 74 | 0.548 | 0.541 | 0.544 | 0.452 |
-
-### qwen/qwen3.8-27b, icd10, candidates gold
-
-| Band | Codes | Gold mentions | Micro P | Micro R | Micro F1 | Macro F1 |
-|---|---:|---:|---:|---:|---:|---:|
-| head | 10 | 627 | 1.000 | 0.837 | 0.911 | 0.895 |
-| torso | 147 | 1979 | 1.000 | 0.671 | 0.803 | 0.699 |
-| tail | 516 | 1032 | 1.000 | 0.472 | 0.641 | 0.477 |
 
 ### Muse Glimmer 30B, icd10, candidates gold
 
@@ -409,8 +344,6 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260815T103041Z`: dataset `3e4376d906ea`, git `d30083d0fd5f`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260815T140034Z`: dataset `3e4376d906ea`, git `3c603de5751e`, provider groq
 - `cpt__llm__qwen-qwen3.6-27b__candgold__20260907T050517Z`: dataset `3e4376d906ea`, git `7929823bf638`, provider groq
-- `cpt__llm__qwen-qwen3.8-27b__candfull__20260907T062206Z`: dataset `3e4376d906ea`, git `7929823bf638`, provider groq
-- `cpt__llm__qwen-qwen3.8-27b__candgold__20260907T062120Z`: dataset `3e4376d906ea`, git `7929823bf638`, provider groq
 - `icd10__llm__claude-sonnet-5__candfull__20260813T214135Z`: dataset `0b6d503e3b12`, git `a733c932f154`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candfull__20260814T104912Z`: dataset `0b6d503e3b12`, git `f4cedc389ae9`, provider anthropic
 - `icd10__llm__claude-sonnet-5__candfull__20260814T151753Z`: dataset `0b6d503e3b12`, git `31e9d0946d10`, provider anthropic
@@ -473,5 +406,3 @@ Paired bootstrap over the same notes. A difference counts as real only when the 
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260815T102523Z`: dataset `0b6d503e3b12`, git `d30083d0fd5f`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260815T135543Z`: dataset `0b6d503e3b12`, git `3c603de5751e`, provider groq
 - `icd10__llm__qwen-qwen3.6-27b__candgold__20260907T045120Z`: dataset `0b6d503e3b12`, git `7929823bf638`, provider groq
-- `icd10__llm__qwen-qwen3.8-27b__candfull__20260907T055424Z`: dataset `0b6d503e3b12`, git `7929823bf638`, provider groq
-- `icd10__llm__qwen-qwen3.8-27b__candgold__20260907T055131Z`: dataset `0b6d503e3b12`, git `7929823bf638`, provider groq

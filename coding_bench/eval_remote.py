@@ -180,16 +180,15 @@ def build_predictor(
         # the Muse GGUF is: a QAT 4 bit build is not the released model.
         client = Gemma4GGUFClient(reasoning_strength=reasoning_strength)
     elif model == "qwen3.8-27b":
-        from coding_bench.adapters.api_groq_qwen38 import QWEN_3_8_27B
+        from coding_bench.adapters.api_groq_qwen38 import qwen38_client
 
-        # Groq decides how this model thinks, so reasoning_strength has nothing
-        # to drive here and is not passed: on the vLLM build it set the model's
-        # own `enable_thinking` switch, and inventing an equivalent out of a
-        # prompt line would be a decoder difference dressed up as a setting.
-        # `reasoning_effort` on GroqClient is the real lever if the 16,384
-        # ceiling turns out to be tight, and it is left unset so this row starts
-        # where the qwen3.6 row beside it starts.
-        client = GroqClient(model_id=QWEN_3_8_27B)
+        # reasoning_strength has to be passed, and that is the whole lesson of
+        # the discarded 2026-09-07 runs. Unset, this endpoint does not think,
+        # while the qwen3.6 endpoint it is compared against does, so leaving it
+        # out measures an instruct model against a reasoning one and calls the
+        # difference a model difference. The adapter maps the strength onto
+        # Groq's reasoning_effort; see its header for why `high` is not it.
+        client = qwen38_client(reasoning_strength=reasoning_strength)
     else:
         raise ValueError(
             f"Unknown model {model!r}. Known: "

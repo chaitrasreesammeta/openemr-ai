@@ -394,6 +394,57 @@ def test_qwen38_reuses_the_client_the_other_groq_rows_use(monkeypatch):
     assert client.temperature == 0.0, "greedy, so a rerun reproduces the run"
 
 
+def test_qwen38_thinks_by_default(monkeypatch):
+    """The regression that cost a full set of runs.
+
+    Groq's 3.8 endpoint does not think unless asked, while the 3.6 endpoint it
+    is compared against does. A client built with no reasoning_effort measures
+    an instruct model against a reasoning one, banks four plausible looking
+    records, and reports the decoder difference as a model difference. Nothing
+    else detects that: the runs succeed, the error rate is clean, and the board
+    tabulates them.
+    """
+    import sys
+    import types
+
+    from coding_bench.adapters.api_groq_qwen38 import qwen38_client
+
+    stub = types.ModuleType("groq")
+    stub.Groq = lambda **kwargs: object()
+    monkeypatch.setitem(sys.modules, "groq", stub)
+
+    assert qwen38_client(api_key="k").reasoning_effort == "medium"
+    assert qwen38_client(api_key="k", reasoning_strength="low").reasoning_effort == "low"
+
+
+def test_an_unknown_reasoning_strength_fails_here_rather_than_mid_run():
+    """Groq answers a bad effort with a 400, one note at a time, having charged
+    for every note before it."""
+    from coding_bench.adapters.api_groq_qwen38 import reasoning_effort_for
+
+    assert reasoning_effort_for("medium") == "medium"
+    with pytest.raises(ValueError, match="Unknown reasoning_strength"):
+        reasoning_effort_for("enthusiastic")
+
+
+def test_the_run_parameter_reaches_the_qwen38_client(monkeypatch):
+    """build_predictor must pass it through, which is where it was dropped."""
+    import sys
+    import types
+
+    from coding_bench.eval_remote import build_predictor
+
+    stub = types.ModuleType("groq")
+    stub.Groq = lambda **kwargs: object()
+    monkeypatch.setitem(sys.modules, "groq", stub)
+    monkeypatch.setenv("GROQ_API_KEY", "not-a-real-key")
+
+    predictor = build_predictor("llm", "qwen3.8-27b", "ICD-10-CM", 16384, "medium")
+    assert predictor.client.reasoning_effort == "medium"
+    low = build_predictor("llm", "qwen3.8-27b", "ICD-10-CM", 16384, "low")
+    assert low.client.reasoning_effort == "low"
+
+
 def test_candidate_caching_approaches_are_pinned_to_one_thread():
     """These cache encoded candidates on the instance; sharing corrupts it.
 

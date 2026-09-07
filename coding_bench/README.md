@@ -196,6 +196,31 @@ tabulate as though they were one model. The single run it produced was
 incomplete and was discarded with it. `git log` has the adapter if the
 comparison is ever worth making deliberately.
 
+**Thinking has to be asked for, and that is the trap on this row.** The two Qwen
+endpoints have opposite defaults on Groq: with no `reasoning_effort` the 3.6 one
+thinks and the 3.8 one does not. 3.6 accepts only `none` and `default`, rejecting
+`low`/`medium`/`high` with a 400; 3.8 accepts all of them and needs one to think
+at all. So `reasoning_strength`, already a recorded run parameter and already in
+the cache key, is mapped onto `reasoning_effort` in the adapter. A set of runs
+banked without it on 2026-09-07 measured an instruct model against a reasoning
+one, put a 30x latency advantage on the board and a head to head win that was a
+decoder difference, and was discarded.
+
+**`high` is not usable on the full ICD-10 catalogue.** Measured over ten notes it
+averaged 16,084 completion tokens against the 16,384 ceiling, truncated nine and
+returned empty content on all ten: the whole budget goes on the trace and the
+answer never arrives. `medium` on the same notes averaged 6,057 with a longest of
+14,704, no truncation and no empty content, and sits alongside the 3.6 row it is
+compared against at 4,944 tokens and 12.4 seconds per note against 6,057 and
+13.4. That is one cell and ten notes, so it is a reason to default to `medium`
+rather than evidence that `high` is broken everywhere.
+
+**It runs at concurrency 2**, set per configuration in the workflow's run set
+rather than globally. Groq's ceiling is tokens per minute, near 250k, and
+thinking takes this model to roughly 20k tokens per note including the prompt, so
+three workers sit above the ceiling and two below it. Concurrency is excluded
+from the cache key, so tuning it re-runs nothing.
+
 **The id carries no build tag**, unlike the two llama.cpp rows and unlike the
 fp8 arm that preceded it. Groq does not publish what precision it serves at, and
 a tag here would be a claim about somebody else's stack that nobody outside it

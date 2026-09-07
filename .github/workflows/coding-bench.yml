@@ -305,6 +305,13 @@ jobs:
           # Every configuration on the leaderboard that is reached over HTTP.
           # GPU models are absent on purpose. Adding a line here is how a new
           # model joins the board.
+          #
+          # The last column is concurrency, blank to take the dispatch default.
+          # It is per configuration because the ceiling it is set against is
+          # tokens per minute rather than requests, so a model that generates
+          # more per note saturates Groq at fewer workers. It is deliberately
+          # excluded from the prediction cache key, so tuning it here re-runs
+          # nothing.
           RUN_SET: |
             icd10 qwen3.6-27b   gold 16384
             icd10 qwen3.6-27b   full 16384
@@ -318,15 +325,15 @@ jobs:
             icd10 sonnet-5      full 16384
             cpt   sonnet-5      gold 16384
             cpt   sonnet-5      full 16384
-            icd10 qwen3.8-27b   gold 16384
-            icd10 qwen3.8-27b   full 16384
-            cpt   qwen3.8-27b   gold 16384
-            cpt   qwen3.8-27b   full 16384
+            icd10 qwen3.8-27b   gold 16384 2
+            icd10 qwen3.8-27b   full 16384 2
+            cpt   qwen3.8-27b   gold 16384 2
+            cpt   qwen3.8-27b   full 16384 2
         run: |
           set -o pipefail
           only="${{ inputs.only }}"
           conc="${{ inputs.concurrency }}"; conc="${conc:-3}"
-          echo "$RUN_SET" | while read -r task model space max_tokens; do
+          echo "$RUN_SET" | while read -r task model space max_tokens cell_conc; do
             [ -z "$task" ] && continue
             line="$task $model $space"
             if [ -n "$only" ] && ! echo "$line" | grep -q "$only"; then
@@ -339,7 +346,7 @@ jobs:
             # done.
             modal run coding_bench/eval_remote.py \
               --task "$task" --model "$model" --candidate-space "$space" \
-              --max-tokens "$max_tokens" --concurrency "$conc" 2>&1 | tee -a /tmp/eval.log
+              --max-tokens "$max_tokens" --concurrency "${cell_conc:-$conc}" 2>&1 | tee -a /tmp/eval.log
             echo "::endgroup::"
           done
 

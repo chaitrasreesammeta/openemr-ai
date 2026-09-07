@@ -70,10 +70,10 @@ MODEL_NAMES: dict[str, tuple[str, str]] = {
     ),
     "openai/gpt-oss-120b": ("GPT-OSS 120B", "Groq API"),
     "qwen/qwen3.6-27b": ("Qwen3.6 27B", "Groq API"),
-    # Named FP8, not "Qwen3.8 27B". Qwen publishes bf16 weights under a separate
-    # id and this row is not them, so the label carries the build for the same
-    # reason the GGUF entries do.
-    "Qwen/Qwen3.8-27B-FP8": ("Qwen3.8 27B FP8", "FP8 block-128, self-hosted vLLM"),
+    # No build tag, unlike the GGUF entries and unlike the FP8 arm this replaced.
+    # Groq does not publish its serving precision, so a tag here would be a claim
+    # about somebody else's stack. Named the same way the 3.6 row above is.
+    "qwen/qwen3.8-27b": ("Qwen3.8 27B", "Groq API"),
 }
 
 
